@@ -6,11 +6,6 @@
 left_init = [3,4,2,1,3,3]
 right_init = [4,3,5,3,9,3]
 
-# Step 1
-# Tasks:
-#   - pair the smallest number in the left and right list together, repeat with next smallest
-#   - within each pair, check how far apart the numbers are (diff btween the two) 
-#   - addup total distance
 
 file_name = "data/dec-1.txt"
 
@@ -28,6 +23,12 @@ def load_data(file_name):
 
     return left, right
 
+# Step 1
+# Tasks:
+#   - pair the smallest number in the left and right list together, repeat with next smallest
+#   - within each pair, check how far apart the numbers are (diff btween the two) 
+#   - addup total distance
+
 def pair_and_compute_distance(left, right):
     # sort
     sorted_left = sorted(left)
@@ -40,9 +41,6 @@ def pair_and_compute_distance(left, right):
 
     return total_dist
 
-# RUN
-left_list,right_list = load_data(file_name)
-total_dist = pair_and_compute_distance(left_list,right_list)
 
 # Step 2
 # Tasks:
@@ -58,4 +56,9 @@ def compute_similarity(left, right):
 
     return total_similarity
 
+
+# RUN
+left_list,right_list = load_data(file_name)
+
+print(pair_and_compute_distance(left_list,right_list))
 print(compute_similarity(left_list,right_list))
