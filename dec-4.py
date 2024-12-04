@@ -69,7 +69,43 @@ def word_search(data):
 
 
 
+# Task 2:
+#   - find 2 MAS in cross-shape
+# M.S
+# .A.
+# M.S
 
+mas = np.array(list("MAS"))
+mas_sam = np.array([mas, mas[::-1]])
+mas_patterns = [
+    [(0,1),(1,1),(2,1)],    # vert
+    [(1,0),(1,1),(1,2)],    # horiz
+    [(0,0),(1,1),(2,2)],    # diag_l
+    [(2,0),(1,1),(0,2)]     # diag_r
+]
+
+def pattern_search(data):
+    puzzle = np.array(data)
+    
+    count = 0
+    for i in range(puzzle.shape[0] - 2):
+        for j in range(puzzle.shape[1] - 2):
+            sub_matrix = puzzle[i:i+len(mas),j:j+len(mas)]
+            
+            words = np.array([np.array([sub_matrix[k] for k in pattern]) for pattern in mas_patterns])
+
+            # + cross
+            # if np.any(np.all( mas_sam== words[0], axis=1)) and np.any(np.all(mas_sam== words[1], axis=1)):
+            #     count += 1
+
+            # X cross
+            if np.any(np.all( mas_sam== words[2], axis=1)) and np.any(np.all(mas_sam== words[3], axis=1)):
+                count += 1
+                
+                
+            
+
+    return count
 
 
 # RUN
@@ -78,4 +114,7 @@ file_name = "data/dec-4.txt"
 
 data = load_data(file_name)
 count = word_search(data)
-print(count)
+new_count = pattern_search(data)
+# print(data)
+
+print(new_count)
