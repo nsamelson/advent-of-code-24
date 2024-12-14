@@ -78,10 +78,7 @@ def claw_machines_big(machines):
 
         if i.is_integer() and j.is_integer():
             # if i <= 100 and j <= 100:
-            all_tokens += 3 * i + j
-
-            print(i, j)
-        
+            all_tokens += 3 * i + j        
 
     return all_tokens
 
