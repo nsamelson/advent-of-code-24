@@ -116,8 +116,6 @@ def wide_warehouse(map,moves):
     robot_coord = ()
     wall_coords = []
     empty_coords = []
-    # box_left_coords = []
-    # box_right_coords = []
 
     box_coords = {}
 
@@ -136,8 +134,6 @@ def wide_warehouse(map,moves):
                 new_row.extend(["[","]"])
                 box_coords[double_coords[0]] = "L"
                 box_coords[double_coords[1]] = "R"
-                # box_left_coords.append(double_coords[0])
-                # box_right_coords.append(double_coords[1])
             elif elem == "@":
                 new_row.extend(["@","."])
                 robot_coord = double_coords[0]
@@ -155,80 +151,120 @@ def wide_warehouse(map,moves):
         "<": (0,-1),
     }
 
-    for move in moves:
+    # recursively push boxes
+    def push_boxes(box_1, direction, visited):
+        x_1,y_1 = box_1
+        dx, dy = direction
 
-        # get dir to move
-        dir = directions[move]
         
-        # get next coord
-        next_pos = (robot_coord[0] + dir[0], robot_coord[1] + dir[1])
+
+        # compute both adjacent boxes
+        next_box_1 = (x_1 + dx, y_1 + dy)
         
-        # hits a wall
+
+        if box_1 in visited:
+            # print(visited)
+            print("Already visited, breaking recursion")
+            return False
+        
+        visited.add(box_1)
+        
+        # Base case: stop if any of the 2 boxes hits a wall or another box with no space
+        if (next_box_1 in wall_coords) \
+            or (next_box_1 in box_coords and not can_push(next_box_1, direction)):
+            
+            return False
+        
+        if box_1 in empty_coords:
+            print("Found empty space at: ", box_1)
+            return True
+        
+            
+        # # Move the box if there's space
+        # if next_box_1 in empty_coords:
+        #     print("Found empty spaces for: ", box_1, "in ", next_box_1)
+        #     return True
+        
+        # get sibling box too 
+        side = box_coords[box_1]
+        box_2 = (box_1[0], box_1[1] + 1 if side == "L" else box_1[1] - 1)
+        x_2,y_2 = box_2
+        next_box_2 = (x_2 + dx, y_2 + dy)
+
+        # Recursive case: push the next box and then move the current one
+        if next_box_1 in box_coords:
+            print("Attempting to push:", box_1, box_2, "->", next_box_1, next_box_2)
+
+            can_move_1 = True if next_box_1 == box_2 else push_boxes(next_box_1, direction, visited)
+            can_move_2 = push_boxes(next_box_2, direction, visited) 
+
+            if can_move_1 and can_move_2:   
+                # if next_box_1 == box_2:
+                box_coords[next_box_2] = box_coords.pop(box_2)  
+                box_coords[next_box_1] = box_coords.pop(box_1) 
+
+                # update empty coords
+                if next_box_2 in empty_coords:
+                    empty_coords[empty_coords.index(next_box_2)] = box_2 
+                if next_box_1 in empty_coords:
+                    empty_coords[empty_coords.index(next_box_1)] = box_1  
+
+                visited.add(box_1)
+                visited.add(box_2)
+
+                return True
+            else:
+                return False
+            
+        # TODO: there is a case I didn't take into account!!!!
+        if box_1 in box_coords and next_box_1 in empty_coords:
+
+            if push_boxes(next_box_2, direction, visited) :
+                box_coords[next_box_1] = box_coords.pop(box_1) 
+                empty_coords[empty_coords.index(next_box_1)] = box_1 
+                
+                print("Pushing ",box_1, box_2, "to ", next_box_1,next_box_2)
+            return True
+        
+        print("out", box_1, next_box_1, box_coords)
+
+        return False
+        
+    # Helper function to check if a box can be pushed
+    def can_push(coord, direction):
+        x, y = coord
+        dx, dy = direction
+        while 0 <= x < rows and 0 <= y < cols:
+            x, y = x + dx, y + dy
+            if (x, y) in wall_coords:
+                return False
+            if (x, y) in empty_coords:
+                return True
+        return False
+    
+    for move in moves:
+        dx, dy = directions[move]
+        next_pos = (robot_coord[0] + dx, robot_coord[1] + dy)
+
+        # print(move, robot_coord, next_pos,box_coords)
+
+        # Wall block
         if next_pos in wall_coords:
             continue
-        # no obstacle
-        elif next_pos in empty_coords:
-            index = empty_coords.index(next_pos)    # index of coord in empty coords
-            empty_coords[index] = robot_coord       # update empty
 
-            # update robot position
-            robot_coord = next_pos  
+        # Empty space
+        elif next_pos in empty_coords:  
+            empty_coords[empty_coords.index(next_pos)] = robot_coord
+            robot_coord = next_pos
 
-        # 1 obstacle
-        else:
-            # get index of the box
-            x,y = next_pos
-            side = box_coords[(x,y)]
-            sec_box = (x,y +1) if side =="L" else (x,y -1)
-            
-            # generate line of coords to check
-            line = []
-
-            # line = [(x+dir[0] * i,y + dir[1] * i) for i in range()]
-
-            while 0 <= x < rows and 0 <= y < cols:
-                line.append((x,y))
-
-                # search one coord further
-                x += dir[0]
-                y += dir[1]
-            
-            # horizontal case
-            if dir[1] != 0:
-
-                free_slots = []
-
-                for i, coord in enumerate(line):
-                    if coord in wall_coords:
-                        break
-                    elif coord in empty_coords:
-                        free_slots.append(True)
-                    else:
-                        free_slots.append(False)
-
-                # can move
-                if any(free_slots):
-                    first_free_index = free_slots.index(True)
-                    boxes_to_move = line[0:first_free_index+1]
-                    # print(boxes_to_move)
-                    for i,box in enumerate(boxes_to_move):
-                        if i ==0:
-                            box_coords.pop(box)
-                            robot_coord = box
-                        elif i < len(boxes_to_move) - 1:
-                            box_coords[box] = "L" if box_coords[box] == "R" else "R"
-                        else:
-                            box_coords[box] = "R" if sum(dir) == 1 else "L"
-
-                # cannot move because of wall
-                else:
-                    continue
-
-            # vertical direction
-            else:
-                print(next_pos,sec_box)
-                print(box_coords)
-
+        # Box interaction
+        elif next_pos in box_coords:    
+            if push_boxes(next_pos, (dx, dy),set()):
+                robot_coord = next_pos
+                
+        print(move, robot_coord, box_coords)
+        # break
+  
 
         
 
