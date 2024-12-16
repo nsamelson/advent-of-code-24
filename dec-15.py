@@ -160,73 +160,74 @@ def wide_warehouse(map,moves):
 
         # compute both adjacent boxes
         next_box_1 = (x_1 + dx, y_1 + dy)
-        
 
-        if box_1 in visited:
-            # print(visited)
-            print("Already visited, breaking recursion")
-            return False
-        
-        visited.add(box_1)
-        
-        # Base case: stop if any of the 2 boxes hits a wall or another box with no space
-        if (next_box_1 in wall_coords) \
-            or (next_box_1 in box_coords and not can_push(next_box_1, direction)):
-            
-            return False
-        
-        if box_1 in empty_coords:
-            print("Found empty space at: ", box_1)
-            return True
-        
-            
-        # # Move the box if there's space
-        # if next_box_1 in empty_coords:
-        #     print("Found empty spaces for: ", box_1, "in ", next_box_1)
-        #     return True
-        
         # get sibling box too 
         side = box_coords[box_1]
         box_2 = (box_1[0], box_1[1] + 1 if side == "L" else box_1[1] - 1)
         x_2,y_2 = box_2
         next_box_2 = (x_2 + dx, y_2 + dy)
 
-        # Recursive case: push the next box and then move the current one
-        if next_box_1 in box_coords:
-            print("Attempting to push:", box_1, box_2, "->", next_box_1, next_box_2)
+        # print("case: ", box_1,box_2, "=>", next_box_1, next_box_2)
+        
 
-            can_move_1 = True if next_box_1 == box_2 else push_boxes(next_box_1, direction, visited)
-            can_move_2 = push_boxes(next_box_2, direction, visited) 
-
-            if can_move_1 and can_move_2:   
-                # if next_box_1 == box_2:
-                box_coords[next_box_2] = box_coords.pop(box_2)  
-                box_coords[next_box_1] = box_coords.pop(box_1) 
-
-                # update empty coords
-                if next_box_2 in empty_coords:
-                    empty_coords[empty_coords.index(next_box_2)] = box_2 
-                if next_box_1 in empty_coords:
-                    empty_coords[empty_coords.index(next_box_1)] = box_1  
-
-                visited.add(box_1)
-                visited.add(box_2)
-
-                return True
-            else:
-                return False
+        if box_1 in visited:
+            # print(visited)
+            # print("Already visited, breaking recursion")
+            return False
+        
+        visited.add(box_1)
+        can_move_1 = False
+        can_move_2 = False
+        
+        # Base case: stop if any of the 2 boxes hits a wall or another box with no space
+        if (next_box_1 in wall_coords) or (next_box_2 in wall_coords)\
+            or (next_box_1 in box_coords and not can_push(next_box_1, direction))\
+                or (next_box_2 in box_coords and not can_push(next_box_2, direction)):
             
-        # TODO: there is a case I didn't take into account!!!!
-        if box_1 in box_coords and next_box_1 in empty_coords:
-
-            if push_boxes(next_box_2, direction, visited) :
-                box_coords[next_box_1] = box_coords.pop(box_1) 
-                empty_coords[empty_coords.index(next_box_1)] = box_1 
-                
-                print("Pushing ",box_1, box_2, "to ", next_box_1,next_box_2)
+            # print("Found wall")
+            return False
+        
+        
+        # breaks recursion if both are clear to be pushed
+        if box_1 in empty_coords and box_2 in empty_coords:
+            # print("Found empty space at: ", box_1, box_2)
             return True
         
-        print("out", box_1, next_box_1, box_coords)
+        
+        can_move_1 = next_box_1 in empty_coords
+        can_move_2 = next_box_2 in empty_coords
+
+        # Recursive check into the next box 1 when box 2 is clear
+        if next_box_1 in box_coords:
+            # print("Attempting to push box_1:", box_1, "->", next_box_1)
+
+            if next_box_1 == box_2:
+                can_move_1 = True
+            else:
+                can_move_1 = push_boxes(next_box_1, direction, visited)
+        
+        # Recursive check into the next box 2
+        if next_box_2 in box_coords:
+            # print("Attempting to push box_2:", box_2, "->", next_box_2)
+            can_move_2 = push_boxes(next_box_2, direction, visited)
+
+        
+        # if both can now move
+        if can_move_1 and can_move_2:
+            box_coords[next_box_2] = box_coords.pop(box_2)
+            box_coords[next_box_1] = box_coords.pop(box_1)
+
+            # if box_2 not in empty_coords:
+            #     empty_coords.append(box_2)
+            # if box_1 not in empty_coords:
+            #     empty_coords.append(box_1)
+
+            if next_box_2 in empty_coords:
+                empty_coords[empty_coords.index(next_box_2)] = box_2 
+            if next_box_1 in empty_coords:
+                empty_coords[empty_coords.index(next_box_1)] = box_1  
+
+            return True
 
         return False
         
@@ -262,10 +263,30 @@ def wide_warehouse(map,moves):
             if push_boxes(next_pos, (dx, dy),set()):
                 robot_coord = next_pos
                 
-        print(move, robot_coord, box_coords)
+        # print(move, robot_coord, box_coords)
         # break
-  
 
+    print(box_coords)
+    # count distance from closest point
+
+    visited = []
+    tot_gps_dist = 0
+
+    for box_1, side in box_coords.items():
+        if box_1 in visited:
+            continue
+
+        x_1,y_1 = box_1
+        x_2,y_2 = (x_1, y_1 + 1 if side == "L" else y_1 - 1)
+
+        visited.extend([box_1,(x_2,y_2)])
+
+
+        closest_edge = min(y_1 if side =="L" else y_2, cols - y_1 - 1 if side =="R" else  cols - y_2 - 1)
+        print(closest_edge, side, box_1)
+        tot_gps_dist += closest_edge + x_1 * 100 
+  
+    return tot_gps_dist
         
 
 # RUN   
