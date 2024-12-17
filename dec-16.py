@@ -165,10 +165,8 @@ def comfy_maze_bfs(map):
     start = tuple(np.column_stack(np.where(map_array == "S"))[0].tolist())
     start_dir = (0, 1)
 
-    visited = {}
-
     # setup queue and stuff
-    queue = [(0, start, start_dir, [])]  # cost, position, direction
+    queue = [(0, start, start_dir, set())]  # cost, position, direction
     heapq.heapify(queue)
 
     comfy_path = set()
@@ -183,17 +181,11 @@ def comfy_maze_bfs(map):
         # Mark current state as visited
         if (x,y) in path:
             continue
-
-        # if ((x,y),dir) in visited and visited[((x,y),dir)]> cost:
-        #     continue
-
-        
+       
         # update path
-        path.append((x,y))
-        # visited[((x,y),dir)] = cost
+        path.add((x,y))
 
         if map_array[x,y] == "E":
-            print(len(path), cost)
             min_cost = min(min_cost, cost)
             if min_cost == cost:
                 comfy_path.update(path)
@@ -213,7 +205,7 @@ def comfy_maze_bfs(map):
             new_cost = cost + (1 if dir==next_dir else 1001)
 
             # if overshoots the min cost, don't explore further
-            if new_cost >= min_cost:
+            if new_cost > min_cost:
                 continue
 
             heapq.heappush(queue, (new_cost, next_pos, next_dir, path.copy()))
