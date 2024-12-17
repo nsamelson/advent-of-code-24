@@ -146,14 +146,91 @@ def maze_bfs(map):
 
 
 
+# Task 2: skibidi toilet
+#   - every non-wall tile is equipped with seat
+#   - want to find count number of seats the path takes?
+
+def comfy_maze_bfs(map):
+    directions = {
+        (1, 0): "v",   # down
+        (-1, 0): "^",  # up
+        (0, 1): ">",   # right
+        (0, -1): "<"   # left
+    }
+    
+    map_array = np.array(map)
+    min_cost = float('inf')
+
+    # set start as tuple and start dir
+    start = tuple(np.column_stack(np.where(map_array == "S"))[0].tolist())
+    start_dir = (0, 1)
+
+    visited = {}
+
+    # setup queue and stuff
+    queue = [(0, start, start_dir, [])]  # cost, position, direction
+    heapq.heapify(queue)
+
+    comfy_path = set()
+
+    # BFS loop
+    while queue:
+
+        # Dijkstra banger
+        # checks the queue element with the cheapest cost
+        cost, (x, y), dir, path = heapq.heappop(queue)
+
+        # Mark current state as visited
+        if (x,y) in path:
+            continue
+
+        # if ((x,y),dir) in visited and visited[((x,y),dir)]> cost:
+        #     continue
+
+        
+        # update path
+        path.append((x,y))
+        # visited[((x,y),dir)] = cost
+
+        if map_array[x,y] == "E":
+            print(len(path), cost)
+            min_cost = min(min_cost, cost)
+            if min_cost == cost:
+                comfy_path.update(path)
+            continue
+
+        for next_dir in directions.keys():
+            next_pos = (x + next_dir[0], y + next_dir[1])
+            i,j = next_pos
+
+            # Check if next position is valid
+            if not (0 <= i < map_array.shape[0] and 0 <= j < map_array.shape[1]):
+                continue
+            if map_array[i, j] == "#":
+                continue
+
+            # compute new cost of moving
+            new_cost = cost + (1 if dir==next_dir else 1001)
+
+            # if overshoots the min cost, don't explore further
+            if new_cost >= min_cost:
+                continue
+
+            heapq.heappush(queue, (new_cost, next_pos, next_dir, path.copy()))
+
+    return len(comfy_path)
+
+
+
 # RUN   
 
 
 file_name = "data/example.txt"
-file_name = "data/dec-16.txt"
+# file_name = "data/dec-16.txt"
 
 map = load_data(file_name)
-score = maze_bfs(map)
+# score = maze_bfs(map)
+score = comfy_maze_bfs(map)
 
 print(score)
 
