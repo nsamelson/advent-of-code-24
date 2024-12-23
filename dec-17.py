@@ -57,6 +57,8 @@ def assembly_instructions(registers, program):
 
         opcode = program[i]
         operand = program[i+1]
+
+        
         
         # get combo operand
         combo = operand if operand <=3 else registers[list(registers.keys())[operand - 4]]
@@ -81,11 +83,11 @@ def assembly_instructions(registers, program):
                 registers["B"] = int(registers["A"] / (2**combo))
             case 7:
                 registers["C"] = int(registers["A"] / (2**combo))
-            
+        print("index:",i, "code and op:", opcode, operand, "out:",out, "A:", registers["A"])
         i +=2
 
     out_txt = ",".join(str(num) for num in out)
-    # print(registers)
+    
 
     return out_txt
 
@@ -96,9 +98,72 @@ def assembly_instructions(registers, program):
 #   - this means Program input == Program output
 
 def assembly_auto_program(registers, program):
+    # goal = []
+    output = program.copy()
+    registers["A"] = 0 # setup corruped to 0
+
+    # go in reverse and wait till
+    i = len(program) - 2
+    quotients = [0,1,2,3,4,5,6,7]
+
+
+    queue = [(len(program) - 2, program.copy(), registers.copy())] # i, output, registers
+    
+    while len(output)!= 0 or i !=0:
+
+        
+
+        opcode = program[i]
+        operand = program[i+1]
+
+        
+
+        # get the jumper indices
+        jumpers = [j for j,val in enumerate(program) if val == 3 and j % 2 == 0]
+        jump_index = [val for val in jumpers if program[val+1] == i]
+        
+             
+        
+        # get combo operand
+        if operand == 7:
+            combo = None
+        else:
+            combo = operand if operand <=3 else registers[list(registers.keys())[operand - 4]]
+
+        match opcode:
+        # operate the opcode
+            case 0:
+                registers["A"] = registers["A"] * (2**combo)
+            case 1:
+                registers["B"] = registers["B"] ^ operand
+            case 2:
+                registers["B"] = combo * 8 + registers["B"]
+            case 3:
+                pass
+            case 4:
+                registers["B"] = registers["B"] ^ registers["C"] 
+            case 5:
+                res = combo * 8 + output.pop()
+                if 3 < operand <7:
+                    registers[list(registers.keys())[operand - 4]] = res
+            case 6:
+                registers["A"] = registers["B"] * (2**combo)
+            case 7:
+                registers["A"] = registers["C"] * (2**combo)
+        
+        
+        print("index:",i, "code and op:", opcode, operand, "out:",output, "A:", registers["A"])
+
+        # jumps if one correct index and A != 0
+        if len(jump_index) !=0 : #and registers["A"] != 0:
+            # print("Jumping from",i, "to", jump_index)
+            i = jump_index[0]
+            continue   
+        
+        i -=2
     
 
-    return None
+    return registers["A"]
 
 
 
@@ -108,8 +173,11 @@ file_name = "data/example.txt"
 # file_name = "data/dec-17.txt"
 
 registers, program = load_data(file_name)
-out = assembly_instructions(registers, program)
 
-out_2 = assembly_auto_program(registers, program)
+out_2 = assembly_auto_program(registers.copy(), program)
+# registers["A"] = out_2
+print("--------------------------")
+out = assembly_instructions(registers.copy(), program)
 
-print(out, out_2)
+print(out_2)
+print(out)
