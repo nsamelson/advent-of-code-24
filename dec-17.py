@@ -98,23 +98,27 @@ def assembly_instructions(registers, program, verbose=False):
 #   - Register A is corrupted
 #   - Need to find new A value so the program copies itself
 #   - this means Program input == Program output
+from collections import deque
+
 
 def assembly_auto_program(start_registers, program):
     start_registers["A"] = 0 # setup corruped to 0
     quotients = [0,1,2,3,4,5,6,7]
 
-    queue = [(len(program) - 2, program.copy(), start_registers.copy())] # i, output, registers
+    queue = deque([(len(program) - 2, program.copy(), start_registers.copy())]) # i, output, registers
     
     # get the jumper indices
-    jumpers = [j for j,val in enumerate(program) if val == 3 and j % 2 == 0]
+    jumper = [j for j,val in enumerate(program) if val == 3 and j % 2 == 0][0]
+
 
     while queue:
-        i, output, registers = queue.pop(0)
+        i, output, registers = queue.popleft()
 
         opcode = program[i]
         operand = program[i+1]
 
-        jump_index = [val for val in jumpers if program[val+1] == i]
+        # jump_index = [val for val in jumpers if program[val+1] == i]
+        jump_index = jumper if program[jumper+1] == i else None
         
         # get combo operand
         if operand == 7:
@@ -127,7 +131,7 @@ def assembly_auto_program(start_registers, program):
         # operate the opcode
         for j in iters:
             new_reg = registers.copy()
-            new_output = output[:]
+            new_output = list(output)
             match opcode:
                 case 0:
                     new_reg["A"] = new_reg["A"] * (2**combo) + j
@@ -140,10 +144,11 @@ def assembly_auto_program(start_registers, program):
                 case 4:
                     new_reg["B"] = new_reg["B"] ^ new_reg["C"] 
                 case 5:
-                    if len(new_output) ==0:
+                    if len(output) ==0:
                         continue
-                    popped = new_output.pop()
-                    res = combo * 8 + popped
+                    new_output.pop()
+                    # popped = new_output.pop()
+                    # res = combo * 8 + popped
                     # print(new_reg[list(new_reg.keys())[operand - 4]], res, popped)
                     # if 3 < operand <7:
                     #     new_reg[list(new_reg.keys())[operand - 4]] = res
@@ -153,10 +158,8 @@ def assembly_auto_program(start_registers, program):
                     new_reg["A"] = new_reg["C"] * (2**combo) + j
 
             # jumps if one correct index and A != 0
-            if len(jump_index) !=0:
-                # for jump_i in jump_index:
-                jump_i = jump_index[0]
-                queue.append((jump_i, new_output, new_reg))
+            if jump_index:
+                queue.append((jump_index, new_output, new_reg))
             else:
                 if i-2>=0:
                     queue.append((i-2, new_output,new_reg))
