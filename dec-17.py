@@ -101,18 +101,19 @@ def assembly_instructions(registers, program, verbose=False):
 from collections import deque
 
 
-def assembly_auto_program(start_registers, program):
+def assembly_auto_program(start_registers, program, verbose = False):
     start_registers["A"] = 0 # setup corruped to 0
-    quotients = [0,1,2,3,4,5,6,7]
-
-    queue = deque([(len(program) - 2, program.copy(), start_registers.copy())]) # i, output, registers
+    no_residues = {"A":None,"B":None,"C":None}
+    queue = deque([(len(program) - 2, program.copy(), start_registers.copy(), no_residues.copy()) ]) # i, output, registers, residues
     
     # get the jumper indices
     jumper = [j for j,val in enumerate(program) if val == 3 and j % 2 == 0][0]
 
+    counter = 0
 
     while queue:
-        i, output, registers = queue.popleft()
+        i, output, registers, residues = queue.popleft()
+        counter +=1
 
         opcode = program[i]
         operand = program[i+1]
@@ -121,20 +122,25 @@ def assembly_auto_program(start_registers, program):
         jump_index = jumper if program[jumper+1] == i else None
         
         # get combo operand
-        if operand == 7:
-            combo = None
-        else:
-            combo = operand if operand <=3 else registers[list(registers.keys())[operand - 4]]
+        combo = None if operand == 7 else operand if operand <= 3 else registers[list(registers.keys())[operand - 4]]
 
-        iters = [0] if opcode in [1,2,3,4,5] else quotients
+        # iters = [0] if opcode in [1,2,3,4,5] else quotients
 
         # operate the opcode
-        for j in iters:
+        # for j in iters:
+        # new_reg = registers.copy()
+        new_output = list(output)
+
+        range_val = 8 if any(residues.values()) else 1
+        
+        # j will be the quotients, ranging from 0 to 7
+        for j in range(range_val):
             new_reg = registers.copy()
-            new_output = list(output)
+            new_residues = None
             match opcode:
                 case 0:
-                    new_reg["A"] = new_reg["A"] * (2**combo) + j
+                    res = residues["A"] if residues["A"] else j
+                    new_reg["A"] = new_reg["A"] * (2**combo) + res
                 case 1:
                     new_reg["B"] = new_reg["B"] ^ operand
                 case 2:
@@ -144,33 +150,43 @@ def assembly_auto_program(start_registers, program):
                 case 4:
                     new_reg["B"] = new_reg["B"] ^ new_reg["C"] 
                 case 5:
-                    if len(output) ==0:
-                        continue
-                    new_output.pop()
-                    # popped = new_output.pop()
-                    # res = combo * 8 + popped
-                    # print(new_reg[list(new_reg.keys())[operand - 4]], res, popped)
-                    # if 3 < operand <7:
-                    #     new_reg[list(new_reg.keys())[operand - 4]] = res
+                    if output:
+                        residue = new_output.pop()
+                        if 3 < operand <7:
+                            new_residues = no_residues.copy()
+                            new_residues[list(new_reg.keys())[operand - 4]] = residue
                 case 6:
-                    new_reg["A"] = new_reg["B"] * (2**combo) + j
+                    res = residues["B"] if residues["B"] else j
+                    new_reg["A"] = new_reg["B"] * (2**combo) + res
                 case 7:
-                    new_reg["A"] = new_reg["C"] * (2**combo) + j
+                    res = residues["C"] if residues["C"] else j
+                    new_reg["A"] = new_reg["C"] * (2**combo) + res
 
-            # jumps if one correct index and A != 0
-            if jump_index:
-                queue.append((jump_index, new_output, new_reg))
-            else:
-                if i-2>=0:
-                    queue.append((i-2, new_output,new_reg))
-                    # print(queue)     
- 
-        if len(output) ==0 and i ==0:
-            verif = assembly_instructions(new_reg.copy(), program.copy())
-            if verif == program:
-                print("index:",i, "out:",new_output, "A:", new_reg["A"],"verif:",verif)
-                return new_reg
+            if verbose:
+                print("index:",i, "code and op:", opcode, operand, "out:",output, "A:", registers["A"])
+                if counter >= 100:
+                    break
+
+            if len(output) ==0 and i ==0:
+                # return
+                verif = assembly_instructions(new_reg.copy(), program.copy())
+                if verif == program:
+                    print("index:",i, "out:",new_output, "A:", new_reg["A"],"verif:",verif)
+                    return new_reg
+
+            if new_residues is None:
+                new_residues = no_residues.copy()
+
+            # jumps if one correct index
+            next_index = jump_index if jump_index else (i - 2)
             
+            if next_index >= 0:
+                queue.append((next_index, new_output, new_reg, new_residues))    
+
+        if counter >= 10000000:
+            print("index:",i, "code and op:", opcode, operand, "out:",output, "A:", registers["A"])
+            break
+        
 
     return None
 
@@ -179,11 +195,11 @@ def assembly_auto_program(start_registers, program):
 # RUN
 
 file_name = "data/example.txt"
-# file_name = "data/dec-17.txt"
+file_name = "data/dec-17.txt"
 
 registers, program = load_data(file_name)
 
-out_2 = assembly_auto_program(registers.copy(), program)
+out_2 = assembly_auto_program(registers.copy(), program, verbose=False)
 # registers["A"] = out_2
 print("--------------------------")
 out = assembly_instructions(registers.copy(), program, verbose=False)
