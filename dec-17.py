@@ -218,7 +218,6 @@ def opty_assembly(registers):
     out = []
 
     A,B,C = registers
-
     while A !=0:
 
         # specific to my program input
@@ -227,49 +226,64 @@ def opty_assembly(registers):
         C = int(A / (2**B))
         B = (B ^ 7 ) ^ C
         A = int(A / 8)
+        # print(A,B,C)
+
         out.append(B % 8)
 
     return out
 
 def opty_reverse_assembly(program):
-    A,B,C = 0,0,0
+    # A,B,C =( 0,0,0)
 
-    program = [7,4]
+    program = [5,3,0]
     output = program[::-1]
-
     C_combs = [0]
+
+    def run_ass(regs:list,i:int):
+        matches = []
+
+        for reg in regs:
+            A, B, C_combs = reg
+            # print(B, B*8+val, val) 
+
+            for C_i in C_combs:                    
+                B_i = val #  + B * 8 # TODO: VERIFY THIS PART I suspect this is the cause
+                B_i = B_i ^ C_i ^ 7
+                next_C_combs = [A * (2**B_i) + x for x in range(8)]
+                B_i = B_i ^ 2
+                A_i = A * 8 + B_i 
+                # print(A_i,B_i,C_i)
+                # print(opty_assembly((A_i,B_i,C_i)))
+
+                if opty_assembly((A_i,B_i,C_i)) == program[-(i+1):]:
+                    # A,B,C = A_i,B_i,C_i
+                    # C_combs = next_C_combs
+                    matches.append((A_i,B_i,next_C_combs))
+                    print("found good match",A_i,B_i,C_i,next_C_combs)
+        return matches
     
+
     # all the output values are the remainder from B % 8
-    for i,val in enumerate(output):
-        for C_i in C_combs:
-            B_i = B * 8 + val
-            B_i = (B_i ^ C_i ) ^ 7
+    regs = [(0,0,C_combs)]
+    for i ,val in enumerate(output):
+        regs = run_ass(regs,i)
+            
+
+            
+    print(regs)
+
+    return regs
 
 
-            next_C_combs = [A * (2**B_i) + i for i in range(8)]
+new_out = opty_assembly((378,registers["B"],registers["C"]))
 
-            B_i = B_i ^ 2
-            A_i = A * 8 + B_i 
-
-
-            print(A_i,B_i,C_i)
-            if opty_assembly((A_i,B_i,C_i)) == program[-(i+1):]:
-                A,B,C = A_i,B_i,C_i
-                C_combs = next_C_combs
-                print("found good match",A,B,C)
-                break
-
-        # break
-
-
-
-new_out = opty_assembly((registers["A"],registers["B"],registers["C"]))
-
+print("--")
 new_regs = opty_reverse_assembly(program)
 
-print(new_out,new_regs)
+# print(new_out,new_regs)
 
-# start_val = 53
+# # 346, 378
+# start_val = 376
 
 # for i in range(16):
 #     new_reg = registers.copy()
