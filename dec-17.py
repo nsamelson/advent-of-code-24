@@ -110,6 +110,7 @@ def assembly_auto_program(start_registers, program, verbose = False):
     jumper = [j for j,val in enumerate(program) if val == 3 and j % 2 == 0][0]
 
     counter = 0
+    decade = 10
 
     while queue:
         i, output, registers, residues = queue.popleft()
@@ -183,9 +184,10 @@ def assembly_auto_program(start_registers, program, verbose = False):
             if next_index >= 0:
                 queue.append((next_index, new_output, new_reg, new_residues))    
 
-        if counter >= 10000000:
+        if counter == decade:
             print("index:",i, "code and op:", opcode, operand, "out:",output, "A:", registers["A"])
-            break
+            decade *= 10
+            # break
         
 
     return None
@@ -199,10 +201,81 @@ file_name = "data/dec-17.txt"
 
 registers, program = load_data(file_name)
 
-out_2 = assembly_auto_program(registers.copy(), program, verbose=False)
+# out_2 = assembly_auto_program(registers.copy(), program, verbose=False)
 # registers["A"] = out_2
 print("--------------------------")
 out = assembly_instructions(registers.copy(), program, verbose=False)
 out_txt = ",".join(str(num) for num in out)
-print(out_2)
-print(out_txt)
+# print(out_2)
+# print(out_txt)
+
+
+
+# REDOING BY OBSERVING THE PATTERNS
+
+
+def opty_assembly(registers):
+    out = []
+
+    A,B,C = registers
+
+    while A !=0:
+
+        # specific to my program input
+
+        B = (A % 8) ^ 2
+        C = int(A / (2**B))
+        B = (B ^ 7 ) ^ C
+        A = int(A / 8)
+        out.append(B % 8)
+
+    return out
+
+def opty_reverse_assembly(program):
+    A,B,C = 0,0,0
+
+    program = [7,4]
+    output = program[::-1]
+
+    C_combs = [0]
+    
+    # all the output values are the remainder from B % 8
+    for i,val in enumerate(output):
+        for C_i in C_combs:
+            B_i = B * 8 + val
+            B_i = (B_i ^ C_i ) ^ 7
+
+
+            next_C_combs = [A * (2**B_i) + i for i in range(8)]
+
+            B_i = B_i ^ 2
+            A_i = A * 8 + B_i 
+
+
+            print(A_i,B_i,C_i)
+            if opty_assembly((A_i,B_i,C_i)) == program[-(i+1):]:
+                A,B,C = A_i,B_i,C_i
+                C_combs = next_C_combs
+                print("found good match",A,B,C)
+                break
+
+        # break
+
+
+
+new_out = opty_assembly((registers["A"],registers["B"],registers["C"]))
+
+new_regs = opty_reverse_assembly(program)
+
+print(new_out,new_regs)
+
+# start_val = 53
+
+# for i in range(16):
+#     new_reg = registers.copy()
+#     val = start_val + i
+#     new_reg["A"] = val
+#     out = assembly_instructions(new_reg, program, verbose=False)
+#     print(val, out)
+
+
