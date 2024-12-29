@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import itertools
 import re
-
+# from math import pow
 # DAY 17 Chronospatia computer
 
 def load_data(file_name):
@@ -214,19 +214,21 @@ out_txt = ",".join(str(num) for num in out)
 # REDOING BY OBSERVING THE PATTERNS
 
 
-def opty_assembly(registers):
+def opty_assembly(registers, verbose=False):
     out = []
 
     A,B,C = registers
     while A !=0:
 
         # specific to my program input
+        if verbose:
+            print(A,B,C)
 
         B = (A % 8) ^ 2
         C = int(A / (2**B))
         B = (B ^ 7 ) ^ C
         A = int(A / 8)
-        # print(A,B,C)
+        
 
         out.append(B % 8)
 
@@ -246,14 +248,15 @@ def opty_reverse_assembly(program):
 
             for C_i in C_combs:                    
                 B_i = B ^ C_i ^ 7
-                C_i_combs = [A * (2**B_i) + x for x in range(8)]
-                B_i = B_i ^ 2
-                A_i = A * 8 + B_i 
+                C_i_combs = [int(A * pow(2, B_i,8) + x) for x in range(8)]
+                A_i = A * 8 + B_i ^ 2
 
                 # need to get B_i from the last operation of 'next round'
-                B_i = B * 8 + val
+                B_i = A * 8 + val
 
-                print(opty_assembly((A_i,B_i,C_i)))
+                # print(opty_assembly((A_i,B_i,C_i)))
+                print(A_i,B_i,C_i_combs)
+
                 if opty_assembly((A_i,B_i,C_i)) == program[-(i+1):]:
                     matches.append((A_i,B_i,C_i_combs))
                     print("found good match",A_i,B_i,C_i,)
@@ -270,7 +273,7 @@ def opty_reverse_assembly(program):
     return regs
 
 
-new_out = opty_assembly((378,registers["B"],registers["C"]))
+new_out = opty_assembly((378,registers["B"],registers["C"]),True)
 
 print("--")
 new_regs = opty_reverse_assembly(program)
