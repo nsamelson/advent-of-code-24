@@ -236,58 +236,39 @@ def opty_assembly(registers, verbose=False):
 
 def opty_reverse_assembly(program):
 
-    program = [3,5,5,3,0]
+    # program = [4,5,5,3,0]
     output = program[::-1]
-    C_combs = [0]
 
-    def run_ass(regs:list,i:int, val:int):
+    def run_ass(a_regs:list,val:int):
         matches = []
 
-        for reg in regs:
-            A, B, C_combs = reg
+        for A in a_regs:
+            for j in range(8):
+                A_i = A * 8 + j
+                B_i = (A_i % 8) ^2 
+                C_i = A_i >> B_i
+                B_i = B_i ^ 7 ^ C_i
+                
+                if B_i % 8 == val:
+                    matches.append(A_i)
 
-            for C_i in C_combs:                    
-                B_i = B ^ C_i ^ 7
-                C_i_combs = [int(A * pow(2, B_i,8) + x) for x in range(8)]
-                A_i = A * 8 + B_i ^ 2
-
-                # need to get B_i from the last operation of 'next round'
-                B_i = A * 8 + val
-
-                # print(opty_assembly((A_i,B_i,C_i)))
-                print(A_i,B_i,C_i_combs)
-
-                if opty_assembly((A_i,B_i,C_i)) == program[-(i+1):]:
-                    matches.append((A_i,B_i,C_i_combs))
-                    print("found good match",A_i,B_i,C_i,)
         return matches
     
 
     # all the output values are the remainder from B % 8
-    regs = [(0,0,C_combs)]
-    for i in range(len(output)):
-        val = output[i+1] if i+1 != len(output) else 0
-        regs = run_ass(regs,i, val)
+    a_regs = [0]
+    for val in output:
+        a_regs = run_ass(a_regs, val)
             
-    print(sorted(regs))
-    return regs
+        print(opty_assembly((a_regs[0],0,0)))
+
+
+    return sorted(a_regs)
 
 
 new_out = opty_assembly((378,registers["B"],registers["C"]),True)
 
 print("--")
 new_regs = opty_reverse_assembly(program)
-
-# print(new_out,new_regs)
-
-# # 346, 378
-# start_val = 376
-
-# for i in range(16):
-#     new_reg = registers.copy()
-#     val = start_val + i
-#     new_reg["A"] = val
-#     out = assembly_instructions(new_reg, program, verbose=False)
-#     print(val, out)
-
+print(new_regs)
 
