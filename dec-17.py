@@ -233,45 +233,40 @@ def opty_assembly(registers):
     return out
 
 def opty_reverse_assembly(program):
-    # A,B,C =( 0,0,0)
 
-    program = [5,3,0]
+    program = [3,5,5,3,0]
     output = program[::-1]
     C_combs = [0]
 
-    def run_ass(regs:list,i:int):
+    def run_ass(regs:list,i:int, val:int):
         matches = []
 
         for reg in regs:
             A, B, C_combs = reg
-            # print(B, B*8+val, val) 
 
             for C_i in C_combs:                    
-                B_i = val #  + B * 8 # TODO: VERIFY THIS PART I suspect this is the cause
-                B_i = B_i ^ C_i ^ 7
-                next_C_combs = [A * (2**B_i) + x for x in range(8)]
+                B_i = B ^ C_i ^ 7
+                C_i_combs = [A * (2**B_i) + x for x in range(8)]
                 B_i = B_i ^ 2
                 A_i = A * 8 + B_i 
-                # print(A_i,B_i,C_i)
-                # print(opty_assembly((A_i,B_i,C_i)))
 
+                # need to get B_i from the last operation of 'next round'
+                B_i = B * 8 + val
+
+                print(opty_assembly((A_i,B_i,C_i)))
                 if opty_assembly((A_i,B_i,C_i)) == program[-(i+1):]:
-                    # A,B,C = A_i,B_i,C_i
-                    # C_combs = next_C_combs
-                    matches.append((A_i,B_i,next_C_combs))
-                    print("found good match",A_i,B_i,C_i,next_C_combs)
+                    matches.append((A_i,B_i,C_i_combs))
+                    print("found good match",A_i,B_i,C_i,)
         return matches
     
 
     # all the output values are the remainder from B % 8
     regs = [(0,0,C_combs)]
-    for i ,val in enumerate(output):
-        regs = run_ass(regs,i)
+    for i in range(len(output)):
+        val = output[i+1] if i+1 != len(output) else 0
+        regs = run_ass(regs,i, val)
             
-
-            
-    print(regs)
-
+    print(sorted(regs))
     return regs
 
 
