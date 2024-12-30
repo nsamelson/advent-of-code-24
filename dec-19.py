@@ -27,9 +27,9 @@ def load_data(file_name):
 #   need to display all the desired designs from the towel patterns we have by putting them next to eachother
 
 
+
 def linen_layout(patterns, designs):
     possible_combs = 0
-
 
     def find_combinations(indices):
         """Create all possible combinations by merging indices together if they're following
@@ -51,7 +51,6 @@ def linen_layout(patterns, designs):
             
         return merged
 
-    # print(sorted(patterns))
     for string in designs:
         valid_range = (0,len(string))
         found_indices = set()
@@ -63,7 +62,6 @@ def linen_layout(patterns, designs):
             if indices:
                 found_indices.update(indices)
         
-        
         combinations = find_combinations(sorted(found_indices))
 
         if valid_range in combinations:
@@ -72,8 +70,49 @@ def linen_layout(patterns, designs):
     return possible_combs
 
 
+# this one's better
+def linen_regex(patterns, designs):
+    possible_combs = 0
+
+    valid_patterns = r"^(" + "|".join(patterns) + ")+$"
+    
+    for string in designs:
+        matching = re.match(valid_patterns, string)
+
+        if matching:
+            possible_combs+=1
+
+    return possible_combs
 
 
+# Task 2:
+#   - find all possible combinations of towel arrangements
+
+# import regex as re
+
+def linen_combinations(patterns, designs):
+    possible_combs = 0
+
+    def count_combs(ranges, valid_range):
+        combs = []
+
+        for x,y in ranges:
+            new_combs = [(i,y) for (i,j) in combs if j==x]
+            if new_combs:
+                combs.extend(new_combs)
+            else:
+                combs.append((x,y))
+        
+        return combs.count(valid_range)
+
+    for string in designs:
+        valid_range = (0,len(string))
+
+        ranges = [(m.start(0), m.end(0)) for pattern in patterns for m in re.finditer(pattern, string)]
+        
+        possible_combs+= count_combs(sorted(ranges), valid_range)
+
+    return possible_combs
 
 # RUN
 
@@ -82,5 +121,6 @@ file_name = "data/dec-19.txt"
 
 patterns, designs = load_data(file_name)
 
-out = linen_layout(patterns, designs)
+out = linen_regex(patterns, designs)
+out = linen_combinations(patterns, designs)
 print(out)
