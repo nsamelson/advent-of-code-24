@@ -57,7 +57,7 @@ def linen_layout(patterns, designs):
 
         # find for each pattern, the indices of found match in string
         for pattern in patterns:
-            indices = [(m.start(0), m.end(0)) for m in re.finditer(pattern, string)]
+            indices = [(m.start(0), m.end(0)) for m in re.finditer(pattern, string)] # missing the lookahead!!!
             
             if indices:
                 found_indices.update(indices)
@@ -94,23 +94,19 @@ def linen_combinations(patterns, designs):
     possible_combs = 0
 
     def count_combs(ranges, valid_range):
-        combs = []
+        dp = {valid_range[0]: 1}
 
-        for x,y in ranges:
-            new_combs = [(i,y) for (i,j) in combs if j==x]
-            if new_combs:
-                combs.extend(new_combs)
-            else:
-                combs.append((x,y))
-        
-        return combs.count(valid_range)
+        for x, y in ranges:
+            dp[y] = dp.get(y, 0) + dp.get(x, 0)
+
+        return dp.get(valid_range[1], 0)
 
     for string in designs:
         valid_range = (0,len(string))
+        # ranges = [(m.start(0), m.end(0)) for pattern in patterns for m in re.finditer(pattern, string)] # missing the lookahead !!!
+        ranges = [(m.start(), m.start() + len(pattern)) for pattern in patterns for m in re.finditer(f"(?=({pattern}))", string)]
 
-        ranges = [(m.start(0), m.end(0)) for pattern in patterns for m in re.finditer(pattern, string)]
-        
-        possible_combs+= count_combs(sorted(ranges), valid_range)
+        possible_combs += count_combs(sorted(ranges), valid_range)
 
     return possible_combs
 
