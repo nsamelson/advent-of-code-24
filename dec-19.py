@@ -3,7 +3,7 @@ import heapq
 import math
 import numpy as np
 from tqdm import tqdm
-import itertools
+from itertools import chain
 import re
 
 # DAY 19 hot springs
@@ -30,24 +30,44 @@ def load_data(file_name):
 def linen_layout(patterns, designs):
     possible_combs = 0
 
+
+    def find_combinations(indices):
+        """Create all possible combinations by merging indices together if they're following
+        Examples:
+            - (0,1) and (1,2) are following up ==> add a new (0,2) in the set
+            - (0,1) and (0,3) don't follow up ==> add a new (0,3) in the set
+        """
+        merged = set()
+
+        for start,end in indices:
+            # find ends in merged that == start            
+            new_starts = [x for (x,y) in merged if y==start]
+
+            if new_starts:
+                for val in new_starts:
+                    merged.add((val, end))            
+            else:
+                merged.add((start,end))
+            
+        return merged
+
     # print(sorted(patterns))
-    for linup in designs:
+    for string in designs:
+        valid_range = (0,len(string))
+        found_indices = set()
+
+        # find for each pattern, the indices of found match in string
+        for pattern in patterns:
+            indices = [(m.start(0), m.end(0)) for m in re.finditer(pattern, string)]
+            
+            if indices:
+                found_indices.update(indices)
         
-        is_found = [False] * len(linup)
-        i = 0
-        while i < len(linup):
+        
+        combinations = find_combinations(sorted(found_indices))
 
-            for j in range(1,len(linup)):
-                word = linup[i:i+j]
-
-                if word in patterns:
-                    is_found[i:i+j] = [True] * j                    
-                    break
-            i+=j
-        print(linup, is_found)
-        if all(is_found):
-            possible_combs += 1
-        # break
+        if valid_range in combinations:
+            possible_combs +=1        
         
     return possible_combs
 
@@ -58,7 +78,7 @@ def linen_layout(patterns, designs):
 # RUN
 
 file_name = "data/example.txt"
-# file_name = "data/dec-19.txt"
+file_name = "data/dec-19.txt"
 
 patterns, designs = load_data(file_name)
 
