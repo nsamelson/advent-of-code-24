@@ -28,18 +28,11 @@ def race_n_cheat(data):
     map_array = np.array(data)
     start = np.column_stack(np.where(map_array=="S"))[0]
     end = np.column_stack(np.where(map_array=="E"))[0]
-    walls = np.column_stack(np.where(map_array=="#"))
-    path_points = np.column_stack(np.where(map_array=="."))
-
-    max_path_len = len(path_points) + 2
     
     # transform to tuples
     start = tuple(int(x) for x in start)
     end = tuple(int(x) for x in end)
-    pathway = tuple((int(x[0]),int(x[1])) for x in path_points) 
     
-    # cheats = [(int(x[0]),int(x[1])) for x in walls] # queued cheats
-
     # basic path:
     base_path = []
     queue = [(start,(0,0))] # current, prev
@@ -58,18 +51,7 @@ def race_n_cheat(data):
                 queue.append((next_pos,pos))
 
     cheat_dirs = [(0,2),(2,0),(0,-2),(-2,0),(1,1),(1,-1),(-1,1),(-1,-1)]
-    
-    # cheat_dirs = set()
-    # three_moves = product(dirs, repeat=3)
-    # for moves in three_moves:
-    #     x,y = 0,0
-    #     for dx, dy in moves:
-    #         x += dx
-    #         y += dy
-    #     if abs(x) + abs(y) >= 2:
-    #         cheat_dirs.add((x,y))
 
-    print(cheat_dirs)
     # now activate cheats
     cheats = []
     for i,pos in enumerate(base_path):
@@ -77,21 +59,15 @@ def race_n_cheat(data):
 
         for k,l in cheat_dirs:
             jumped = (x+k,y+l)
-            #TODO: find about the 3rd step when not cheating anymore!!
-            # make next step and check if inside the base_path as well!!!
 
+            # if fall further into the path, then we successfully cheated
             if jumped in base_path[i:]:
                 new_index = base_path[i:].index(jumped)
 
-                if new_index>2:
+                if new_index>100:
                     cheats.append(new_index-2)
 
-
-    print(sorted(cheats), len(cheats))
-    paths = []
-
-    # return len([path for path in paths if max_path_len - path >=1])
-    # return paths
+    return len(cheats)
             
             
 
