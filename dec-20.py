@@ -71,46 +71,6 @@ def race_n_cheat(data):
             
             
 # task 2 : now can cheat up to 20 moves
-from heapq import heappop, heappush
-
-def precompute_wall_connections(map_array, path_points, max_distance, cheat_dist):
-    connections = {pos: set() for pos in path_points}
-
-    for i,start in enumerate(path_points):
-        queue = [(0, start)]  # (distance, position)
-        visited = set()
-        
-        while queue:
-            dist, pos = heappop(queue)
-
-            if dist > max_distance + 2: # not counting start and end
-                continue                # don't explore further
-                        
-            for dx, dy in [(0,1), (1,0), (0,-1), (-1,0)]:
-                next_pos = (pos[0] + dx, pos[1] + dy)
-
-                if next_pos in visited:
-                    continue
-
-                if not 0 <= next_pos[0] < map_array.shape[0] or not 0 <= next_pos[1] < map_array.shape[1]:
-                    continue
-                
-                if map_array[next_pos[0],next_pos[1]] == "#":
-                    heappush(queue, (dist + 1, next_pos))
-                    visited.add(next_pos)
-                else:   
-                    # connections[start].add(next_pos)
-                    visited.add(next_pos)
-
-                    # for some reason limits way too much
-                    index = path_points.index(next_pos)
-                    if index - i - dist >= cheat_dist:
-                        connections[start].add(next_pos)
-
-    return connections
-
-
-
 def race_n_cheat_more(data):
     dirs = [(0,1),(1,0),(0,-1),(-1,0)]
 
@@ -142,56 +102,23 @@ def race_n_cheat_more(data):
                 queue.append((next_pos,pos))
 
 
-
     cheats = {}
     cheat_dist = 100
-    connections = precompute_wall_connections(map_array, base_path, 20, cheat_dist)
-    # print(connections)
-    print(sum([len(c) for c in connections.values()]))
-
-    # for start, ends in connections.items():
-    #     start_index = base_path.index(start)
-    #     for end in ends:
-    #         end_index = base_path.index(end)
-    #         dist = abs(start[0] - end[0]) + abs(start[1] - end[1])
-    #         jump = (end_index - start_index) - dist
-
-    #         if jump >= cheat_dist:
-    #             cheats[jump] = cheats.get(jump,0) + 1
-    
-    # for i, start in enumerate(base_path[:-cheat_dist]):
-    #     start_index = base_path.index(start)
-    #     ends = connections.get(start,[])
-        
-    #     for end in ends:
-    #         end_index = base_path.index(end)
-
-    #         if end_index <= start_index:
-    #             continue
-
-    #         dist = abs(start[0] - end[0]) + abs(start[1] - end[1])
-    #         jump = end_index - start_index - dist
-            
-    #         if jump >= cheat_dist:
-    #             cheats[jump] = cheats.get(jump,0) + 1
-
 
     # iterate from start up to len(base_path) - cheat_dist
-    # for i, start_jump in enumerate(base_path[:-cheat_dist]):
-    #     s_x, s_y = start_jump
+    for i, start_jump in enumerate(base_path[:-cheat_dist]):
+        s_x, s_y = start_jump
 
-    #     # iterate from i up to the end
-    #     for j, end_jump in enumerate(base_path[i+cheat_dist:]):
-    #         e_x,e_y = end_jump
+        # iterate from i up to the end
+        for j, end_jump in enumerate(base_path[i+cheat_dist:]):
+            e_x,e_y = end_jump
 
-    #         dist = abs(s_x - e_x) + abs(s_y - e_y)
-    #         jump_dist = j - dist + cheat_dist 
+            dist = abs(s_x - e_x) + abs(s_y - e_y)
+            jump_dist = j - dist + cheat_dist 
 
-    #         # if jump distance is smaller or equal to 20 and we skip cheat_dist or more moves
-    #         if dist <= 20 and jump_dist >= cheat_dist:
-    #             # if any(item in sublist for sublist in jump_starts for item in end_walls):
-    #             if end_jump in connections.get(start,[]):
-    #                 cheats[jump_dist] = cheats.get(jump_dist,0) + 1
+            # if jump distance is smaller or equal to 20 and we skip cheat_dist or more moves
+            if dist <= 20 and jump_dist >= cheat_dist:
+                cheats[jump_dist] = cheats.get(jump_dist,0) + 1
 
     print(cheats)
     return sum(cheats.values())
