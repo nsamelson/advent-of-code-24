@@ -70,47 +70,63 @@ def remote_ception(data):
         
         return sub_seqs
     
-    sequence = []
+    sequences = []
     for code in data:
-        sub_seq = []
+        sequence = []
 
-        for i in range(4):
-            subsub_seq = []
 
-            if i == 0:  # keypad
-                chars, pad, pos = [code], keypad, keypad_pos
-            else:       # remote pad
-                chars, pad, pos = sub_seq, remote_pad, rem_pos
+        queue = [(code, 0)] # chars, position on pad, i (0 to 3)
+        visited = set()
 
-            for possi in chars:
-                for val in possi:
-                    next_pos = np.argwhere(pad==val)[0]
-                    path = next_pos - pos
-                    pressed_seq = [item + ["A"] for item in do_sequence(path,pos,pad)]
 
-                    if not subsub_seq:
-                        subsub_seq = pressed_seq.copy()
-                    else:
-                        all_combs = [x + y for x, y in itertools.product(subsub_seq, pressed_seq)]
-                        subsub_seq = all_combs.copy()
 
-                    pos = next_pos
-                # if i >= 1:
-                #     break
-            # TODO: Prune a bit more agressively, on the right track but takes too much time
-            # Also try maybe BFS in that part 
-            lenghts = [len(item) for item in subsub_seq]
-            min_len = min(lenghts)
-            sub_seq = [item for i, item in enumerate(subsub_seq) if lenghts[i] == min_len]
-            # print(sub_seq)
-            # if i >= 1:
-            #     break
-        sequence.append(sub_seq[0])
+        while queue:
+            chars, i = queue.pop(0)
+            # sub_seqs = {}
+
+            if tuple(chars) in visited:
+                continue
+
+            visited.add(tuple(chars))
+
+            pad = keypad if i==0 else remote_pad
+            pos = keypad_pos if i == 0 else rem_pos
+
+            if i == 3 and (len(chars) < len(sequence) or not sequence):
+                sequence = chars 
+                continue
+
+            combinations = []
+
+            for j, val in enumerate(chars):
+                next_pos = np.argwhere(pad==val)[0]
+                path = next_pos - pos
+                next_seqs = [item + ["A"] for item in do_sequence(path,pos,pad)]
+                
+                if not next_seqs:
+                    continue
+
+                min_len = min([len(item) for item in next_seqs])
+
+                # add to the dict and go to the next val
+                sub_seqs = [item for item in next_seqs if len(item)==min_len]                
+                combinations = [x + y for x, y in itertools.product(combinations, sub_seqs)] if combinations else sub_seqs
+                pos = next_pos             
+                
+            for comb in combinations:
+                if i < 3:
+                    queue.append((comb, i+1))
+            # print(combinations)
+
+            # break
+        sequences.append(sequence)
         break
+
 
     
     output = 0
-    for i, seq in enumerate(sequence):
+    print(sequences)
+    for i, seq in enumerate(sequences):
         code = int("".join(data[i][:-1]))
         seq_string = "".join(seq)
         print(code, len(seq), seq_string, )
