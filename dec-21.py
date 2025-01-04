@@ -23,10 +23,11 @@ def load_data(file_name):
 #   - find shortest sequence of button presses, complexity = length of sequence * numeric part of the code
 
 import itertools
-def remote_ception(data):
 
-    keypad = np.array([["7","8","9"],["4","5","6"],["1","2","3"],[None,"0","A"]])
-    remote_pad = np.array([[None,"^","A"],["<","v",">"]])
+def build_paths(pad):
+    paths = {}
+    values = pad.flatten()
+    combs = list(itertools.product(values, values))
 
     dirs = [
         [np.array((0,1)), ">"],
@@ -34,41 +35,60 @@ def remote_ception(data):
         [np.array((0,-1)), "<"],
         [np.array((-1,0)), "^"]
     ]
+    
+    for (start,end) in combs:
+        # skip invalid paths
+        if not start or not end or start == end:
+            continue
 
-    keypad_pos = np.array((3,2))
-    rem_pos= np.array((0,2))
-
-    def do_sequence(start_path, start_pos, pad):
-        start_dist = abs(start_path[0]) + abs(start_path[1])
-        sub_seqs = [] 
-
-        queue = [(start_pos, start_path, start_dist, [])]
-        visited = set()
-
-        while queue:
-            pos, path, dist, sub_seq = queue.pop(0)
-            visited.add(tuple(((pos[0]),pos[1])))
-
-            if dist == 0:
-                sub_seqs.append(sub_seq)
-                continue
-
-            for dir,seq in dirs:
-                new_path = path - dir
-                new_pos = pos + dir
-                new_dist = abs(new_path[0]) + abs(new_path[1])
-
-                if not 0 <= new_pos[0] < pad.shape[0] or not 0 <= new_pos[1] < pad.shape[1]:
-                    continue
-
-                if tuple((new_pos[0],new_pos[1])) in visited:
-                    continue
-
-                if (new_dist < dist) and pad[new_pos[0],new_pos[1]]:
-                    queue.append((new_pos,new_path,new_dist,sub_seq+[seq]))
+        start_pos = np.argwhere(pad==start)[0]
+        end_pos = np.argwhere(pad==end)[0]
 
         
-        return sub_seqs
+        queue = [(np.sum(abs(end_pos - start_pos)), start_pos,[] )] # distance, position, path
+        visited = set()
+        possible_paths = []
+
+        while queue:
+            dist, pos, path = queue.pop(0)
+            
+            visited.add(tuple(pos))
+
+            if np.all(pos == end_pos):
+                possible_paths.append(path+["A"])
+                continue
+
+            for dir,char in dirs:
+                new_pos = pos + dir
+                new_dist = np.sum(abs(end_pos - new_pos))
+
+                if new_dist>= dist: 
+                    continue
+                if not 0 <= new_pos[0] < pad.shape[0] or not 0 <= new_pos[1] < pad.shape[1]:
+                    continue
+                if tuple(new_pos) in visited:
+                    continue
+
+                if pad[new_pos[0],new_pos[1]]:
+                    new_path = path.copy() + [char]
+                    queue.append((dist, new_pos,new_path))
+        paths[(start,end)] = possible_paths
+
+    return paths
+
+
+
+def remote_ception(data):
+
+    keypad = np.array([["7","8","9"],["4","5","6"],["1","2","3"],[None,"0","A"]])
+    remote_pad = np.array([[None,"^","A"],["<","v",">"]])
+
+    keypad_paths = build_paths(keypad)
+    remote_paths = build_paths(remote_pad)
+    # print(remote_paths)
+
+    max_iter = 3
+
     
     sequences = []
     for code in data:
@@ -77,11 +97,11 @@ def remote_ception(data):
 
         queue = [(code, 0)] # chars, position on pad, i (0 to 3)
         visited = set()
-
+        prev_val = "A"
 
 
         while queue:
-            chars, i = queue.pop(0)
+            chars, i = queue.pop()
             # sub_seqs = {}
 
             if tuple(chars) in visited:
@@ -89,33 +109,29 @@ def remote_ception(data):
 
             visited.add(tuple(chars))
 
-            pad = keypad if i==0 else remote_pad
-            pos = keypad_pos if i == 0 else rem_pos
+            pad_paths = keypad_paths if i == 0 else remote_paths
 
-            if i == 3 and (len(chars) < len(sequence) or not sequence):
+
+            if i == max_iter and (len(chars) < len(sequence) or not sequence):
                 sequence = chars 
                 continue
 
             combinations = []
 
             for j, val in enumerate(chars):
-                next_pos = np.argwhere(pad==val)[0]
-                path = next_pos - pos
-                next_seqs = [item + ["A"] for item in do_sequence(path,pos,pad)]
-                
-                if not next_seqs:
-                    continue
+                next_seqs = pad_paths.get((prev_val,val),[["A"]])
+                combinations.extend(next_seqs[0])
+            
+                # combinations = [x + y for x, y in itertools.product(combinations, next_seqs)] if combinations else next_seqs
+                prev_val = val       
 
-                min_len = min([len(item) for item in next_seqs])
-
-                # add to the dict and go to the next val
-                sub_seqs = [item for item in next_seqs if len(item)==min_len]                
-                combinations = [x + y for x, y in itertools.product(combinations, sub_seqs)] if combinations else sub_seqs
-                pos = next_pos             
-                
-            for comb in combinations:
-                if i < 3:
-                    queue.append((comb, i+1))
+            queue.append((combinations,i+1))
+            # if i< max_iter:
+            #     queue.extend(combinations)
+            # print(combinations)
+            # for comb in combinations:
+            #     if i < max_iter:
+            #         queue.append((comb, i+1))
             # print(combinations)
 
             # break
