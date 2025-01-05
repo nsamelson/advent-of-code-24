@@ -99,31 +99,26 @@ def remote_ception(data):
 
     keypad_paths, keypad_dists = build_paths(keypad)
     remote_paths, remote_dists = build_paths(remote_pad)
-    # print(remote_paths)
 
     # recursive func
     def get_seq(code,i):
         pad_paths = keypad_paths if i == 0 else remote_paths
         prev_val = "A"
 
-        # reach the max depth, return
+        # if reach the max depth, return
         if i == 3:
             return code
 
-        sequence = []
         combinations = []
         for j,val in enumerate(code):
+            # get the sequence between 2 values
             seq_val = pad_paths.get((prev_val,val),[["A"]]) 
             prev_val = val           
 
-            # get cost per path
-            costs_per_path = []            
-            for path in seq_val:
-                costs_per_path.append(sum([remote_dists.get(("A" if i==0 else path[i-1],path[i]),0) for i in range(0,len(path))]))
-            min_cost = min(costs_per_path)
+            # generate all sequences recursively
+            new_seqs = [get_seq(path,i+1) for path in seq_val]
 
-            # filter to get the minimal cost sequences then create the combinations
-            new_seqs = [get_seq(path,i+1) for k,path in enumerate(seq_val) if costs_per_path[k]==min_cost]
+            # create all possible combinations
             combinations = [x+y for x,y in itertools.product(combinations, new_seqs)] if combinations else new_seqs
 
         # filter to get the min
@@ -132,19 +127,16 @@ def remote_ception(data):
             cost_per_comb.append(sum([remote_dists.get(("A" if i==0 else comb[i-1],comb[i]),0) for i in range(0,len(comb))]))
         min_index = cost_per_comb.index(np.min(cost_per_comb,axis=0))
 
-        sequence.extend(combinations[min_index])
 
-        # if i == 0:
-        #     print(i, "".join(sequence), len(sequence))
-        return sequence    
+        return combinations[min_index]    
 
-    
+    # iterate over all codes
     sequences = []
     for code in data:
         sequences.append(get_seq(code, 0))
     
+    # compute move cost
     output = 0
-    # print(sequences)
     for i, seq in enumerate(sequences):
         code = int("".join(data[i][:-1]))
         seq_string = "".join(seq)
