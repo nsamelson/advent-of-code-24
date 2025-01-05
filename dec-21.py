@@ -26,6 +26,7 @@ import itertools
 
 def build_paths(pad):
     paths = {}
+    distances = {}
     values = pad.flatten()
     combs = list(itertools.product(values, values))
 
@@ -43,9 +44,10 @@ def build_paths(pad):
 
         start_pos = np.argwhere(pad==start)[0]
         end_pos = np.argwhere(pad==end)[0]
+        dist = np.sum(abs(end_pos - start_pos))
 
         
-        queue = [(np.sum(abs(end_pos - start_pos)), start_pos,[] )] # distance, position, path
+        queue = [(dist, start_pos,[] )] # distance, position, path
         visited = set()
         possible_paths = []
 
@@ -72,9 +74,21 @@ def build_paths(pad):
                 if pad[new_pos[0],new_pos[1]]:
                     new_path = path.copy() + [char]
                     queue.append((dist, new_pos,new_path))
-        paths[(start,end)] = possible_paths
+        
+        # keep only the ones that group the repeated moves
+        moves_per_path = []
+        for path in possible_paths:
+            moves = sum([1 if path[i-1] != path[i] else 0 for i in range(1, len(path))])
+            moves_per_path.append(moves)
 
-    return paths
+        min_moves = min(moves_per_path)
+
+        paths[(start,end)] = [path for i,path in enumerate(possible_paths) if moves_per_path[i]==min_moves]
+        distances[(start,end)] = dist
+        
+
+    return paths, distances
+
 
 
 
@@ -83,65 +97,54 @@ def remote_ception(data):
     keypad = np.array([["7","8","9"],["4","5","6"],["1","2","3"],[None,"0","A"]])
     remote_pad = np.array([[None,"^","A"],["<","v",">"]])
 
-    keypad_paths = build_paths(keypad)
-    remote_paths = build_paths(remote_pad)
+    keypad_paths, keypad_dists = build_paths(keypad)
+    remote_paths, remote_dists = build_paths(remote_pad)
     # print(remote_paths)
 
-    max_iter = 3
+    # recursive func
+    def get_seq(code,i):
+        pad_paths = keypad_paths if i == 0 else remote_paths
+        prev_val = "A"
+
+        # reach the max depth, return
+        if i == 3:
+            return code
+
+        sequence = []
+        combinations = []
+        for j,val in enumerate(code):
+            seq_val = pad_paths.get((prev_val,val),[["A"]]) 
+            prev_val = val           
+
+            # get cost per path
+            costs_per_path = []            
+            for path in seq_val:
+                costs_per_path.append(sum([remote_dists.get(("A" if i==0 else path[i-1],path[i]),0) for i in range(0,len(path))]))
+            min_cost = min(costs_per_path)
+
+            # filter to get the minimal cost sequences then create the combinations
+            new_seqs = [get_seq(path,i+1) for k,path in enumerate(seq_val) if costs_per_path[k]==min_cost]
+            combinations = [x+y for x,y in itertools.product(combinations, new_seqs)] if combinations else new_seqs
+
+        # filter to get the min
+        cost_per_comb = []
+        for comb in combinations:
+            cost_per_comb.append(sum([remote_dists.get(("A" if i==0 else comb[i-1],comb[i]),0) for i in range(0,len(comb))]))
+        min_index = cost_per_comb.index(np.min(cost_per_comb,axis=0))
+
+        sequence.extend(combinations[min_index])
+
+        # if i == 0:
+        #     print(i, "".join(sequence), len(sequence))
+        return sequence    
 
     
     sequences = []
     for code in data:
-        sequence = []
-
-
-        queue = [(code, 0)] # chars, position on pad, i (0 to 3)
-        visited = set()
-        prev_val = "A"
-
-
-        while queue:
-            chars, i = queue.pop()
-            # sub_seqs = {}
-
-            if tuple(chars) in visited:
-                continue
-
-            visited.add(tuple(chars))
-
-            pad_paths = keypad_paths if i == 0 else remote_paths
-
-
-            if i == max_iter and (len(chars) < len(sequence) or not sequence):
-                sequence = chars 
-                continue
-
-            combinations = []
-
-            for j, val in enumerate(chars):
-                next_seqs = pad_paths.get((prev_val,val),[["A"]])
-                combinations.extend(next_seqs[0])
-            
-                # combinations = [x + y for x, y in itertools.product(combinations, next_seqs)] if combinations else next_seqs
-                prev_val = val       
-
-            queue.append((combinations,i+1))
-            # if i< max_iter:
-            #     queue.extend(combinations)
-            # print(combinations)
-            # for comb in combinations:
-            #     if i < max_iter:
-            #         queue.append((comb, i+1))
-            # print(combinations)
-
-            # break
-        sequences.append(sequence)
-        break
-
-
+        sequences.append(get_seq(code, 0))
     
     output = 0
-    print(sequences)
+    # print(sequences)
     for i, seq in enumerate(sequences):
         code = int("".join(data[i][:-1]))
         seq_string = "".join(seq)
@@ -152,7 +155,7 @@ def remote_ception(data):
 # RUN
 
 file_name = "data/example.txt"
-# file_name = "data/dec-21.txt"
+file_name = "data/dec-21.txt"
 
 data = load_data(file_name)
 out = remote_ception(data)
