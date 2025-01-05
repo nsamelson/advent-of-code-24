@@ -146,7 +146,7 @@ def remote_ception(data):
 # Task 2: now there are 25 robots instead of 3
 
 from functools import lru_cache, cache
-MAX_DEPTH = 3
+MAX_DEPTH = 12
 
 def remote_ception_cached(data):
     # Ensure data is hashable (convert from list to tuple)
@@ -159,13 +159,12 @@ def remote_ception_cached(data):
     remote_paths, remote_dists = build_paths(remote_pad)
 
 
-    @cache
+    @lru_cache(maxsize=None)
     def get_seq_cost(code):
-        # return sum([remote_dists.get(("A" if i == 0 else code[i - 1], code[i]), 0) for i in range(len(code))])
         return sum(remote_dists.get(("A" if i == 0 else code[i - 1], code[i]), 0) for i in range(len(code)))
 
     # Recursive function
-    @cache
+    @lru_cache(maxsize=None)
     def get_seq(code, i):
         pad_paths = keypad_paths if i == 0 else remote_paths
         prev_val = "A"
@@ -186,12 +185,10 @@ def remote_ception_cached(data):
             # Create all possible combinations
             combinations = tuple(x + y for x, y in itertools.product(combinations, new_seqs)) if combinations else new_seqs
 
-        return min(combinations, key=lambda comb: get_seq_cost(tuple(comb)))
+        return min(combinations, key=lambda comb: get_seq_cost(comb))
 
     # Iterate over all codes
-    sequences = []
-    for code in data:
-        sequences.append(get_seq(code, 0))
+    sequences = [get_seq(code, 0) for code in data]
     
     # Compute move cost
     output = 0
