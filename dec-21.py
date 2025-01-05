@@ -83,13 +83,11 @@ def build_paths(pad):
 
         min_moves = min(moves_per_path)
 
-        paths[(start,end)] = [path for i,path in enumerate(possible_paths) if moves_per_path[i]==min_moves]
+        paths[(start,end)] = tuple((tuple(path) for i,path in enumerate(possible_paths) if moves_per_path[i]==min_moves))
         distances[(start,end)] = dist
         
 
     return paths, distances
-
-
 
 
 def remote_ception(data):
@@ -144,11 +142,79 @@ def remote_ception(data):
         output += code * len(seq)
 
     return output
+
+# Task 2: now there are 25 robots instead of 3
+
+from functools import lru_cache, cache
+MAX_DEPTH = 3
+
+def remote_ception_cached(data):
+    # Ensure data is hashable (convert from list to tuple)
+    data = tuple(tuple(x) for x in data)  # Convert each sublist to a tuple
+
+    keypad = np.array([["7", "8", "9"], ["4", "5", "6"], ["1", "2", "3"], [None, "0", "A"]])
+    remote_pad = np.array([[None, "^", "A"], ["<", "v", ">"]])
+
+    keypad_paths, keypad_dists = build_paths(keypad)
+    remote_paths, remote_dists = build_paths(remote_pad)
+
+
+    @cache
+    def get_seq_cost(code):
+        # return sum([remote_dists.get(("A" if i == 0 else code[i - 1], code[i]), 0) for i in range(len(code))])
+        return sum(remote_dists.get(("A" if i == 0 else code[i - 1], code[i]), 0) for i in range(len(code)))
+
+    # Recursive function
+    @cache
+    def get_seq(code, i):
+        pad_paths = keypad_paths if i == 0 else remote_paths
+        prev_val = "A"
+
+        # If reach the max depth, return
+        if i == MAX_DEPTH:
+            return code
+
+        combinations = ()
+        for j, val in enumerate(code):
+            # Get the sequence between 2 values
+            seq_val = pad_paths.get((prev_val, val), tuple((("A",),)))
+            prev_val = val           
+
+            # Generate all sequences recursively
+            new_seqs = tuple(get_seq(path, i + 1) for path in seq_val)
+
+            # Create all possible combinations
+            combinations = tuple(x + y for x, y in itertools.product(combinations, new_seqs)) if combinations else new_seqs
+
+        return min(combinations, key=lambda comb: get_seq_cost(tuple(comb)))
+
+    # Iterate over all codes
+    sequences = []
+    for code in data:
+        sequences.append(get_seq(code, 0))
+    
+    # Compute move cost
+    output = 0
+    for i, seq in enumerate(sequences):
+        code = int("".join(data[i][:-1]))
+        output += code * len(seq)
+
+    return output
+
+
+
+
+
+
+
+
+
 # RUN
 
 file_name = "data/example.txt"
 file_name = "data/dec-21.txt"
 
 data = load_data(file_name)
-out = remote_ception(data)
+# out = remote_ception(data)
+out = remote_ception_cached(data)
 print(out)
