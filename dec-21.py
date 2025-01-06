@@ -146,7 +146,55 @@ def remote_ception(data):
 # Task 2: now there are 25 robots instead of 3
 
 from functools import lru_cache, cache
-MAX_DEPTH = 12
+MAX_DEPTH = 26
+
+
+
+
+def remote_ception_opti(data):
+    # Ensure data is hashable (convert from list to tuple)
+    data = tuple(tuple(x) for x in data)  # Convert each sublist to a tuple
+
+    keypad = np.array([["7", "8", "9"], ["4", "5", "6"], ["1", "2", "3"], [None, "0", "A"]])
+    remote_pad = np.array([[None, "^", "A"], ["<", "v", ">"]])
+
+    keypad_paths, _ = build_paths(keypad)
+    remote_paths, _ = build_paths(remote_pad)
+
+    @cache
+    def get_seq(code, i):
+        pad_paths = keypad_paths if i == 0 else remote_paths
+        prev_val = "A"
+
+        # If reach the max depth, return the length of the code
+        if i == MAX_DEPTH:
+            return len(code)
+        
+        combinations = ()
+        for j, val in enumerate(code):
+            # Get the sequence between 2 values
+            seq_val = pad_paths.get((prev_val, val), tuple((("A",),)))
+            prev_val = val           
+
+            # Generate all sequences recursively
+            new_seqs = tuple(get_seq(path, i + 1) for path in seq_val)
+
+            # Create all possible combinations
+            combinations = tuple(x + y for x, y in itertools.product(combinations, new_seqs)) if combinations else new_seqs
+        
+        return min(combinations)
+
+
+    sequences = [get_seq(code, 0) for code in data]
+
+    output = 0
+    for i, seq in enumerate(sequences):
+        code = int("".join(data[i][:-1]))
+        output += code * seq
+    
+    return output
+
+
 
 def remote_ception_cached(data):
     # Ensure data is hashable (convert from list to tuple)
@@ -155,7 +203,7 @@ def remote_ception_cached(data):
     keypad = np.array([["7", "8", "9"], ["4", "5", "6"], ["1", "2", "3"], [None, "0", "A"]])
     remote_pad = np.array([[None, "^", "A"], ["<", "v", ">"]])
 
-    keypad_paths, keypad_dists = build_paths(keypad)
+    keypad_paths, _ = build_paths(keypad)
     remote_paths, remote_dists = build_paths(remote_pad)
 
 
@@ -184,7 +232,7 @@ def remote_ception_cached(data):
 
             # Create all possible combinations
             combinations = tuple(x + y for x, y in itertools.product(combinations, new_seqs)) if combinations else new_seqs
-
+        
         return min(combinations, key=lambda comb: get_seq_cost(comb))
 
     # Iterate over all codes
@@ -213,5 +261,7 @@ file_name = "data/dec-21.txt"
 
 data = load_data(file_name)
 # out = remote_ception(data)
-out = remote_ception_cached(data)
+# out = remote_ception_cached(data)
+# print(out)
+out = remote_ception_opti(data)
 print(out)
