@@ -51,19 +51,12 @@ def decipher_secret(data):
 
 def find_best_sequence(data):
 
-    total = 0
-    best_sequence = []
-    sequences_dict = {}
-    # all_sequences = dict.fromkeys(product(range(-9,10),repeat=4),{})
     all_sequences = defaultdict(dict)
 
-
     for i,secret in enumerate(data):
-
         # setup
         seq = deque(maxlen=4)
         last_price = None
-
 
         for _ in range(2000):
             
@@ -71,23 +64,16 @@ def find_best_sequence(data):
             price = secret % 10
             price_diff = price - last_price if last_price is not None else None
 
-            # print(secret, price,last_price, price_diff)
-
             # generate sequence
             if price_diff is not None:
                 seq.append(price_diff)
-
-                # # remove first elem of seq # fifo
-                # if len(seq)>4:
-                #     seq.pop(0)
                 
                 if len(seq)==4:
-                    seq_tuple = tuple(seq)
-                    if i not in all_sequences[seq_tuple]:
-                        all_sequences[tuple(seq)][i] = price
-                
-                # if len(seq)==4 and str(seq) not in sequences_dict[start_secret]:
-                #     sequences_dict[start_secret][str(seq)] = price
+                    sequence_entries = all_sequences[tuple(seq)]
+                    
+                    # add price if first encounter of sequence
+                    if i not in sequence_entries:
+                        sequence_entries[i] = price
 
             # generate new secret for next sequence
             secret = (secret ^ (secret<<6)) & 0xFFFFFF
@@ -97,16 +83,17 @@ def find_best_sequence(data):
             # update last price
             last_price = price
 
-    # Now find best sequence
-    # [ all_sequences.update(value.keys()) for key,value in sequences_dict.items()]
-    print(all_sequences[(-2,1,-1,3)])
+    # find best sequence
+    best_price = 0
+    for seq, prices in all_sequences.items():
+        best_price = max(sum(prices.values()), best_price)
 
-    return total
+    return best_price
 # RUN
 
 
 file_name = "data/example.txt"
-# file_name = "data/dec-22.txt"
+file_name = "data/dec-22.txt"
 
 data = load_data(file_name)
 # print(data)
