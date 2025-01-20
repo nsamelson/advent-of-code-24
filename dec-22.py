@@ -69,11 +69,9 @@ def find_best_sequence(data):
                 seq.append(price_diff)
                 
                 if len(seq)==4:
-                    sequence_entries = all_sequences[tuple(seq)]
-                    
-                    # add price if first encounter of sequence
-                    if i not in sequence_entries:
-                        sequence_entries[i] = price
+                    seq_tuple = tuple(seq)
+                    # Efficient dictionary update
+                    all_sequences[seq_tuple].setdefault(i, price)
 
             # generate new secret for next sequence
             secret = (secret ^ (secret<<6)) & 0xFFFFFF
@@ -84,11 +82,8 @@ def find_best_sequence(data):
             last_price = price
 
     # find best sequence
-    best_price = 0
-    for seq, prices in all_sequences.items():
-        best_price = max(sum(prices.values()), best_price)
+    return max(sum(prices.values()) for prices in all_sequences.values())
 
-    return best_price
 # RUN
 
 
