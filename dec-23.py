@@ -20,19 +20,19 @@ def load_data(file_name):
 #   - count sets where at least one of the connected computers STARTS with a "t" (e.g. "tc")
 
 def triconnect(data):
-
     connected = []
     
     # generate set of all different computers with "t" in it
-    chief_set = set(item for sub_item in data for item in sub_item if "t" == item[0])
-   
+    chief_set = set(item for sub_item in data for item in sub_item if "t" == item[0])   
     
     # iterate over the chief potential computers
     for chief in chief_set:
         
+        # find all computers that are connected to the chief computer
         chief_conns = [item for sub_item in data for item in sub_item if chief in sub_item and chief!= item]
-        conn_combs = list(combinations(chief_conns,2))
+        conn_combs = list(combinations(chief_conns,2))  # create combination of all connections
 
+        # lookup each of the combinations inside the data and add into connected
         filtered = [set(conn + (chief,)) for conn in conn_combs if set(conn) in data]
         [connected.append(subset) for subset in filtered if subset not in connected]
 
