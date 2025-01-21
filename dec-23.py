@@ -6,6 +6,7 @@ import math
 from itertools import chain, product, combinations
 import re
 from functools import cache, lru_cache
+import networkx as nx
 
 # DAY 23 LAN party
 
@@ -39,11 +40,20 @@ def triconnect(data):
     return len(connected)
 
 
-
-
 # task 2:
+#   - find the largest set of computers that are connected 
+#   - then sort alphabetically, seperated by commas
+import matplotlib.pyplot as plt
 
 
+def largest_party(data):
+    G = nx.Graph(data)
+    
+    # generate all the fully connected subgraphs
+    all_cliques = list(nx.find_cliques(G))
+
+    return ",".join(sorted(max(all_cliques, key=len)))
+    
 
 
 
@@ -59,5 +69,8 @@ file_name = "data/dec-23.txt"
 data = load_data(file_name)
 # print(data)
 
-out = triconnect(data)
+# out = triconnect(data)
+
+out = largest_party(data)
+
 print(out)
