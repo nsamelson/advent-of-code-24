@@ -101,6 +101,25 @@ def read_instrs_with_extra_steps(vals, instructions:list):
     z_wires = {f"z{str(i).zfill(2)}":val for i,val in enumerate(reversed(list(z_bin)[2:]))}
 
 
+    # operate instructions
+    while instructions:
+        instr = instructions.pop(0)
+
+        a = vals.get(instr["in"][0],None)
+        b = vals.get(instr["in"][2],None)
+
+        if a is None or b is None:
+            instructions.append(instr)
+            continue
+
+        op = ops[instr["in"][1]]
+
+        # run operation and save the value
+        vals[instr["out"]] = op(a,b)
+
+
+    print(z_wires)
+    print({key:val for key,val in vals.items() if key.startswith("z")})
     
 
 
