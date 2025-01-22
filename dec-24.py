@@ -61,15 +61,17 @@ def read_instructions(vals, instructions:list):
 
         # run operation and save the value
         vals[instr["out"]] = op(a,b)
-
-    print(len(vals), vals)
     
     # get output and generate binary
-    output = {key:val for key, val in vals.items() if re.search("^z[0-9]{2}",key)}
-    reverse_keys = sorted(output,reverse=True)
-    binary = "".join([str(output[i]) for i in reverse_keys])
+    # output = {key:val for key, val in vals.items() if re.search("^z[0-9]{2}",key)}
+    # reverse_keys = sorted(output,reverse=True)
+    # binary = "".join([str(output[i]) for i in reverse_keys])
 
-    print(binary)
+    # Filter and sort keys, then generate binary
+    binary = "".join(
+        str(vals[key]) 
+        for key in sorted((k for k in vals if k.startswith("z")), reverse=True)
+    )
 
     return int(binary,2)
 
@@ -88,6 +90,26 @@ def read_instrs_with_extra_steps(vals, instructions:list):
         "XOR": operator.xor,
     }
 
+    def get_int(vals, letter:str):
+        return int("".join(
+            str(vals[key]) 
+            for key in sorted((k for k in vals if k.startswith(letter)), reverse=True)
+        ),2)
+    
+    # sum to achieve, and transform into the list of wires
+    z_bin = bin(get_int(vals, "x") + get_int(vals,"y"))
+    z_wires = {f"z{str(i).zfill(2)}":val for i,val in enumerate(reversed(list(z_bin)[2:]))}
+
+
+    
+
+
+
+
+    
+
+    
+
 
 
 # RUN
@@ -99,6 +121,6 @@ file_name = "data/example.txt"
 vals, instructions = load_data(file_name)
 # print(vals, instructions)
 
-out = read_instructions(vals, instructions)
+# out = read_instructions(vals, instructions)
 out = read_instrs_with_extra_steps(vals, instructions)
 print(out)
