@@ -83,6 +83,28 @@ def read_instructions(vals, instructions:list):
 #   - output of this operation is set on wires starting with z
 #   - 4 pairs of gates have been swapped (one swap each)
 
+def load_data(file_name):
+    vals = {}
+    instructions = {}
+
+    for line in open(file_name).readlines():
+        line = line.strip()
+
+        if ":" in line:
+            val = line.split(":")
+            vals[val[0]] = int(val[1])
+
+        if "->" in line:
+            val = line.split(" ")
+            instructions[val[-1]] = {
+                "a": val[0],
+                "b": val[2],
+                "op":val[1]
+            }
+
+    return vals, instructions
+
+
 def read_instrs_with_extra_steps(vals, instructions:list):
     ops = {
         "AND": operator.and_,
@@ -90,63 +112,61 @@ def read_instrs_with_extra_steps(vals, instructions:list):
         "XOR": operator.xor,
     }
 
-    def get_wires(letter:str, values):
-        # return {key:val for key, val in values.items() if key.startswith(letter)}
-        return [val for key, val in values.items() if key.startswith(letter)]
-    
-    def sum_wires(wire_a, wire_b):
-        out_wire = {}
-
-        for i in range(len(wire_a)):
-            a_i, b_i = wire_a[i], wire_b[i]
-            c_i = out_wire.get(i,0)
-
-            # ripple carry
-            out_wire[i] = a_i ^ b_i ^ c_i
-            out_wire[i+1] = (a_i and b_i) or (a_i ^ b_i and c_i)
+    def do_op_from_key(out_key):
+        instr_i = instructions[out_key]
+        a_key, b_key, op_key = instr_i["a"], instr_i["b"], instr_i["op"]
         
-        return list(out_wire.values())
+        # recursive call to find key
+        recurs = {op_key: {key: do_op_from_key(key) if key not in vals else vals[key] for key in [a_key,b_key]}}
+
+        # extract values from keys
+        a_i, b_i = vals.get(a_key,None), vals.get(b_key,None)
+
+        # update vals
+        vals[out_key] = ops[op_key](a_i,b_i)
+
+        return recurs
     
-    def ripple_carry(a_i,b_i,c_in):
-        z_i = a_i ^ b_i ^ c_in
-        c_out = (a_i and b_i) or (a_i ^ b_i and c_in)
-        return z_i, c_out
-    
 
+    wrong_instrs = {}
+    i = 0
+    while "z45" not in vals:
+        # extract keys from index
+        x_key, y_key, z_key = f"x{str(i).zfill(2)}", f"y{str(i).zfill(2)}", f"z{str(i).zfill(2)}"
+        i+=1
 
-    # get init x and y
-    x_wires, y_wires = get_wires("x",vals), get_wires("y", vals)
-    z_wires = sum_wires(x_wires, y_wires)
-
-    # setup output
-    z_carry = {0:0}
-    z_out = {}
-    wrong_insrs = []
-
-    while instructions:
-
-        instr = instructions.pop(0)
-
-        a = vals.get(instr["in"][0],None)
-        b = vals.get(instr["in"][2],None)
+        # do recursive operations to obtain the tree
+        operations = do_op_from_key(z_key)
         
-        if a is None or b is None:
-            instructions.append(instr)
+        # Operations should form a ripple carry:
+        # zi = xi ^ yi ^ ci
+        # ci_next = (xi and yi) or (xi ^ yi and ci)
+
+        # if z doesn't have a XOR operation, bad wire
+        if operations.get("XOR",None) is None:
+            wrong_instrs[z_key] = instructions[z_key]
             continue
 
-        # run operation and save the value
-        op = ops[instr["in"][1]]
-        vals[instr["out"]] = op(a,b)
+        if i>2:
+            operands = operations["XOR"]
+            for wire_key, op in operands.items():
 
-        # if set the output bit with an op different from XOR, this doesn't give us the ripple carry 
-        if instr["out"].startswith("z") and instr["in"][1] != "XOR":
-            wrong_insrs.append(instr)
-
-    return wrong_insrs
+                # if doesn't apply x_i XOR y_i
+                if "XOR" in op: 
+                    if x_key not in op["XOR"] or y_key not in op["XOR"]:
+                        wrong_instrs[wire_key] = op
+                # if inside the OR comparison, don't find 2 AND operators
+                elif "OR" in op:
+                    for key,val in op["OR"].items():
+                        if not "AND" in val:
+                            wrong_instrs[key] = val
+                # other operation
+                else:
+                    wrong_instrs[wire_key] = op 
+            
+    return ",".join(sorted(list(wrong_instrs.keys())))
 
     
-
-
 
 # RUN
 
