@@ -91,112 +91,58 @@ def read_instrs_with_extra_steps(vals, instructions:list):
     }
 
     def get_wires(letter:str, values):
-        return {key:val for key, val in values.items() if key.startswith(letter)}
+        # return {key:val for key, val in values.items() if key.startswith(letter)}
+        return [val for key, val in values.items() if key.startswith(letter)]
     
-    def get_int(wires):
-        return int("".join(
-            str(wires[key]) 
-            for key in sorted((k for k in wires), reverse=True)
-        ),2)
-    
-    def ripple_carry(a,b,c_in):
-        z = a ^ b ^ c_in
-        c_out = (a and b) or (a ^ b and c_in)
+    def sum_wires(wire_a, wire_b):
+        out_wire = {}
 
-        return z, c_out
+        for i in range(len(wire_a)):
+            a_i, b_i = wire_a[i], wire_b[i]
+            c_i = out_wire.get(i,0)
+
+            # ripple carry
+            out_wire[i] = a_i ^ b_i ^ c_i
+            out_wire[i+1] = (a_i and b_i) or (a_i ^ b_i and c_i)
+        
+        return list(out_wire.values())
     
-    # create lists for z and c
-    z_bits = []
-    c_bits = [0]
+    def ripple_carry(a_i,b_i,c_in):
+        z_i = a_i ^ b_i ^ c_in
+        c_out = (a_i and b_i) or (a_i ^ b_i and c_in)
+        return z_i, c_out
+    
+
 
     # get init x and y
     x_wires, y_wires = get_wires("x",vals), get_wires("y", vals)
+    z_wires = sum_wires(x_wires, y_wires)
 
-    # build the solution first (z_comp)
-    for i in range(len(x_wires.keys())+1):
-        x,y = f"x{str(i).zfill(2)}", f"y{str(i).zfill(2)}"
-        c_in = c_bits[i]
+    # setup output
+    z_carry = {0:0}
+    z_out = {}
+    wrong_insrs = []
 
-        if x_wires.get(x,None) is None:
-            z_bits.append(c_in)
-
-
-        z, c_out = ripple_carry(x_wires[x],y_wires[y],c_in)
-        z_bits.append(z)
-        c_bits.append(c_out)
-
-    # this idea is to create the z with carry over BEFORE running the instructions
-    # then during the instructions read, detect the anomalies (differences between the instr and the real z and c)
-    # if there is an anomaly, add back into the queue, then try to swap the outputs? or just manually?
-
-
-    # x,y = get_int(x_wires), get_int(y_wires)
-    # # get z to achieve
-    # z_bin = bin(x + y)
-    # z_wires = {f"z{str(i).zfill(2)}":int(val) for i,val in enumerate(reversed(list(z_bin)[2:]))}
-
-
-
-
-
-
-
-
-
-
-
-    # operate instructions
     while instructions:
+
         instr = instructions.pop(0)
 
-        # extract from instruction
-        a_pos, b_pos = instr["in"][0], instr["in"][2]
-        op = ops[instr["in"][1]]
-
-        # get bit values
-        a = vals.get(a_pos,None)
-        b = vals.get(b_pos,None)  
-
-        # if one of them is none, add back to queue
+        a = vals.get(instr["in"][0],None)
+        b = vals.get(instr["in"][2],None)
+        
         if a is None or b is None:
             instructions.append(instr)
             continue
-        
-        # if working with x and y and know carry_bit, then compute 
-        if a_pos[1:] == b_pos[1:]:
-            bit_pos = a_pos[1:]
-            c_in = carry_bits.get(int(bit_pos),None)
-
-            # if no carry bit yet, add to queue
-            if c_in is None:
-                instructions.append(instr)
-                continue
-
-            z_out, c_out = ripple_carry(a,b,c_in)
-            # carry_bits[int(bit_pos)+1] = c_out
-            # z_comp[int(bit_pos)] = z_out
-    
 
         # run operation and save the value
+        op = ops[instr["in"][1]]
         vals[instr["out"]] = op(a,b)
-        # print(a,b, instr["out"])
 
-    # adding the carrying bit
-    last_pos = sorted(z_comp.keys())[-1]
-    z_comp[last_pos+1] = carry_bits.get(last_pos+1,0)
+        # if set the output bit with an op different from XOR, this doesn't give us the ripple carry 
+        if instr["out"].startswith("z") and instr["in"][1] != "XOR":
+            wrong_insrs.append(instr)
 
-    # print(x_wires, y_wires)
-    print(z_wires.values())
-    print(get_wires("z",vals).values())
-    print(z_comp.values())
-    print(get_int(z_wires),get_int(get_wires("z",vals)))
-    
-    
-
-
-
-
-    
+    return wrong_insrs
 
     
 
