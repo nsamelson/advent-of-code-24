@@ -223,13 +223,14 @@ def count_discount(clusters):
 
 
 file_name = "data/example.txt"
-# file_name = "data/dec-12.txt"
+file_name = "data/dec-12.txt"
 
 data, plants = load_data(file_name)
 # cost = compute_fencing_cost(data, plants)
 
 clusters = cluster_plants_bfs(data)
+# print(len(clusters))
 # cost = count_fence_costs(clusters)
-cost = count_discount(clusters)
+# cost = count_discount(clusters)
 
-print("tot cost: ", cost)
+# print("tot cost: ", cost)
