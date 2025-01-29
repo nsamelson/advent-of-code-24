@@ -76,12 +76,12 @@ def compute_bulk_cost(data):
     col_neighbors = [(-1, 0), (1, 0)]
     
 
-    def bfs(visited, cluster, coord, neighbors):
-        queue = [coord]
+    def bfs(visited, cluster, start, neighbors):
+        queue = deque([start])
         sub_cluster = []
 
         while queue:
-            x,y = queue.pop(0)
+            x, y = queue.popleft()
 
             if (x,y) in visited:
                 continue
@@ -94,7 +94,7 @@ def compute_bulk_cost(data):
                 if (nx,ny) in cluster and (nx,ny) not in visited:
                     queue.append((nx,ny))
 
-        return sub_cluster, visited
+        return sub_cluster
 
 
     tot_cost = 0
@@ -110,13 +110,17 @@ def compute_bulk_cost(data):
 
             # check horizontal sub_clusters
             if coord not in h_visited:
-                horiz_cluster, h_visited = bfs(h_visited,cluster,coord,row_neighbors)
+                horiz_cluster = bfs(h_visited,cluster,coord,row_neighbors)
+                h_visited.update(horiz_cluster)
+
                 # find free top and bottom sides
                 sides.extend([[(x+dx, y+dy) not in cluster for x,y in horiz_cluster ] for dx,dy in col_neighbors ])
 
             # check vertical sub_clusters
             if coord not in v_visited:
-                vert_cluster, v_visited = bfs(v_visited,cluster,coord,col_neighbors)
+                vert_cluster = bfs(v_visited,cluster,coord,col_neighbors)
+                v_visited.update(vert_cluster)
+
                 # find free left and right sides
                 sides.extend([[(x+dx, y+dy) not in cluster for  x,y in vert_cluster ] for dx,dy in row_neighbors])
                 
@@ -124,7 +128,7 @@ def compute_bulk_cost(data):
             perimeter += sum([len([list(j) for i,j in itertools.groupby(side) if i==True]) for side in sides])
 
         tot_cost += area * perimeter
-        # print(cluster, area, perimeter, area * perimeter)
+        # print(area, "*", perimeter,"=", area * perimeter)
     
     return tot_cost
 
@@ -134,7 +138,7 @@ def compute_bulk_cost(data):
 
 
 file_name = "data/example.txt"
-# file_name = "data/dec-12.txt"
+file_name = "data/dec-12.txt"
 
 data = load_data(file_name)
 
