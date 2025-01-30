@@ -107,62 +107,101 @@ def wide_warehouse(map,moves):
         "<": np.array([0,-1]),
     }
 
-    def project_next_pos(pos,dir ):
+
+    def project_next_pos(pos,dir, i ):
+
         x,y = pos
-        map_updates = {}
+        next_pos = nx, ny = pos + dir
+        type = str(map_array[x,y])
+        next_type = str(map_array[nx, ny])
 
-        # hit wall
-        if map_array[x,y] == "#":
-            return False, map_updates
-        # free to go
-        elif map_array[x,y] == ".":
-            return True, map_updates
-        # hit a box
-        else:
-            next_pos = pos + dir
-            type = map_array[x,y]
-            map_updates[tuple(int(i) for i in next_pos)] = type
+        sec_pos = sx,sy = pos + directions[">"] if type == "[" else pos + directions["<"]
+        sec_next_pos = snx, sny = sec_pos + dir
+        sec_type = str(map_array[sx,sy])
+        next_sec_type = str(map_array[snx, sny])
 
-            # recursive call of first box part
-            first_next_free, first_map_updates = project_next_pos(next_pos, dir)
-            map_updates.update(first_map_updates)
+        map_updates = {i:{
+            (int(nx),int(ny)): type,            # move type to next location
+            (int(x),int(y)): ".",               # setup trail
+        }}
+        
+        # if (x,y) in visited:
+        #     print(pos, map_updates)
+        #     return None, map_updates
+        # visited.add((x,y))
 
-            # Moving horizontally
-            if dir[1]!= 0:
-                return first_next_free, map_updates
+        # case of moving robot
+        if type == "@":
+            if next_type == "#":
+                return False, map_updates
             
-            # get second part of the box if moving vertically
-            sec_pos = sx, sy = pos + directions[">"] if type == "[" else pos + directions["<"]
-            sec_next_pos = sec_pos + dir
-            map_updates[tuple(int(i) for i in sec_next_pos)] = map_array[sx, sy]
+            elif next_type == ".":
+                return True, map_updates
+            
+            else:
+                # recursive call of first box part
+                is_next_free, next_map_updates = project_next_pos(next_pos, dir, i+1)
+                map_updates.update(next_map_updates) 
+                return is_next_free, map_updates
+        
+        # case of moving boxes
+        map_updates[i][(int(snx),int(sny))] = sec_type  # second box part
+        
+        if (next_pos != sec_pos).any():
+            map_updates[i][(int(sx),int(sy))] = "."     # trail if not in map_update
 
-            # recursive call of second box part
-            sec_next_free, sec_map_updates = project_next_pos(sec_next_pos, dir)
-            map_updates.update(sec_map_updates)
+        if next_type == "#" or next_sec_type == "#":    # hit wall
+            return False, map_updates
+        
+        elif next_type == "." and next_sec_type == ".": # free to go
+            return True, map_updates
 
-            # tail of second box update
-            tail_pos = tuple(int(i) for i in sec_pos)
-            if tail_pos not in map_updates:
-                map_updates[tail_pos] = "." 
+        else:
+            # TODO: be careful when one of them only needs to check the recursive
+            # push sideways
+            if (next_pos == sec_pos).all():
+                is_next_free, next_map_updates = project_next_pos(sec_next_pos, dir, i+1)
+                map_updates.update(next_map_updates) 
+                return is_next_free, map_updates
+            
+            else:
+                is_first_free, a = project_next_pos(next_pos, dir, i+1) # if next_type !="." else True, {i+1:{}}
+                is_sec_free, b = project_next_pos(sec_next_pos, dir, i+1) # if next_type !="." else True, {i+1:{}}
 
-            return first_next_free and sec_next_free, map_updates
+                if is_sec_free == None or is_first_free == None:
+                    print("AAAAA", next_type, next_sec_type, map_updates)
+                
+                c = {}
+                for d in (a, b):  
+                    for k, v in d.items():  
+                        c.setdefault(k, {}).update(v)
+
+                map_updates.update(c) 
+
+                return is_first_free and is_sec_free, map_updates
+            
 
 
-
+    i = 0
     for move in moves:
         dir = directions[move]
-        new_pos = pos + dir
-
-        next_free_pos, map_updates = project_next_pos(new_pos, dir)
-        map_updates[tuple(int(i) for i in pos)] = "."
-        map_updates[tuple(int(i) for i in new_pos)] = "@"
+        # new_pos = pos + dir
+        visited = set()
+        next_free_pos, map_updates = project_next_pos(pos, dir,0)
+        
 
         # free to move
         if next_free_pos:
-            for (x,y), type in map_updates.items():
-                map_array[x,y] = type
-            pos = new_pos
+            for index in sorted(map_updates.keys(),reverse=True):
+                for (x,y), type in map_updates[index].items():
+                    map_array[x,y] = type
 
+            pos += dir
+
+            # if 19 <= i<= 22:
+            # print(move, map_updates, next_free_pos)
+            # print("\n".join(["".join(l) for l in map_array]))
+        i+=1
     print("\n".join(["".join(l) for l in map_array]))
 
     # compute GPS coordinates
