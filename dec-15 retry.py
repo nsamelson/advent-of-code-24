@@ -125,11 +125,6 @@ def wide_warehouse(map,moves):
             (int(x),int(y)): ".",               # setup trail
         }}
         
-        # if (x,y) in visited:
-        #     print(pos, map_updates)
-        #     return None, map_updates
-        # visited.add((x,y))
-
         # case of moving robot
         if type == "@":
             if next_type == "#":
@@ -157,7 +152,6 @@ def wide_warehouse(map,moves):
             return True, map_updates
 
         else:
-            # TODO: be careful when one of them only needs to check the recursive
             # push sideways
             if (next_pos == sec_pos).all():
                 is_next_free, next_map_updates = project_next_pos(sec_next_pos, dir, i+1)
@@ -165,11 +159,15 @@ def wide_warehouse(map,moves):
                 return is_next_free, map_updates
             
             else:
-                is_first_free, a = project_next_pos(next_pos, dir, i+1) # if next_type !="." else True, {i+1:{}}
-                is_sec_free, b = project_next_pos(sec_next_pos, dir, i+1) # if next_type !="." else True, {i+1:{}}
-
-                if is_sec_free == None or is_first_free == None:
-                    print("AAAAA", next_type, next_sec_type, map_updates)
+                if next_type in ["[","]"]:
+                    is_first_free, a = project_next_pos(next_pos, dir, i+1)
+                else:
+                    is_first_free, a = True, {i+1:{}}
+                
+                if next_sec_type in ["[","]"]:
+                    is_sec_free, b = project_next_pos(sec_next_pos, dir, i+1)
+                else:
+                    is_sec_free, b = True, {i+1:{}} 
                 
                 c = {}
                 for d in (a, b):  
@@ -186,7 +184,6 @@ def wide_warehouse(map,moves):
     for move in moves:
         dir = directions[move]
         # new_pos = pos + dir
-        visited = set()
         next_free_pos, map_updates = project_next_pos(pos, dir,0)
         
 
