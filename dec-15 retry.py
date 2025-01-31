@@ -107,98 +107,54 @@ def wide_warehouse(map,moves):
         "<": np.array([0,-1]),
     }
 
+    # BFS
+    def project_next_pos(pos, dir):
+        queue = [(pos, dir, 0, {})]  # Use a queue for iterative BFS
+        final_updates = {}
+        visited = set()
 
-    def project_next_pos(pos,dir, i ):
+        while queue:
+            (x, y), dir, depth, map_updates = queue.pop(0)  # current position
+            nx, ny = x + dir[0], y + dir[1]                 # next position
 
-        x,y = pos
-        next_pos = nx, ny = pos + dir
-        type = str(map_array[x,y])
-        next_type = str(map_array[nx, ny])
+            if (x, y) in visited:
+                continue
+            visited.add((x,y))
 
-        sec_pos = sx,sy = pos + directions[">"] if type == "[" else pos + directions["<"]
-        sec_next_pos = snx, sny = sec_pos + dir
-        sec_type = str(map_array[sx,sy])
-        next_sec_type = str(map_array[snx, sny])
+            type = str(map_array[x, y])
+            next_type = str(map_array[nx, ny])
 
-        map_updates = {i:{
-            (int(nx),int(ny)): type,            # move type to next location
-            (int(x),int(y)): ".",               # setup trail
-        }}
-        
-        # case of moving robot
-        if type == "@":
-            if next_type == "#":
-                return False, map_updates
-            
+            map_updates.setdefault(depth, {})[(nx, ny)] = type  # Move type
+            map_updates.setdefault(depth, {})[(x, y)] = "."     # Leave trail
+
+            # Linked box logic
+            if type in ["[", "]"]:
+                sec_pos = (x, y + 1) if type == "[" else (x, y - 1)
+                queue.append((sec_pos, dir, depth + 1, map_updates))
+
+            if next_type == "#":  # Wall encountered
+                return False, {}
             elif next_type == ".":
-                return True, map_updates
-            
+                final_updates.update(map_updates)
+                continue
             else:
-                # recursive call of first box part
-                is_next_free, next_map_updates = project_next_pos(next_pos, dir, i+1)
-                map_updates.update(next_map_updates) 
-                return is_next_free, map_updates
-        
-        # case of moving boxes
-        map_updates[i][(int(snx),int(sny))] = sec_type  # second box part
-        
-        if (next_pos != sec_pos).any():
-            map_updates[i][(int(sx),int(sy))] = "."     # trail if not in map_update
-
-        if next_type == "#" or next_sec_type == "#":    # hit wall
-            return False, map_updates
-        
-        elif next_type == "." and next_sec_type == ".": # free to go
-            return True, map_updates
-
-        else:
-            # push sideways
-            if (next_pos == sec_pos).all():
-                is_next_free, next_map_updates = project_next_pos(sec_next_pos, dir, i+1)
-                map_updates.update(next_map_updates) 
-                return is_next_free, map_updates
-            
-            else:
-                if next_type in ["[","]"]:
-                    is_first_free, a = project_next_pos(next_pos, dir, i+1)
-                else:
-                    is_first_free, a = True, {i+1:{}}
-                
-                if next_sec_type in ["[","]"]:
-                    is_sec_free, b = project_next_pos(sec_next_pos, dir, i+1)
-                else:
-                    is_sec_free, b = True, {i+1:{}} 
-                
-                c = {}
-                for d in (a, b):  
-                    for k, v in d.items():  
-                        c.setdefault(k, {}).update(v)
-
-                map_updates.update(c) 
-
-                return is_first_free and is_sec_free, map_updates
-            
+                queue.append(((nx, ny), dir, depth + 1, map_updates))
 
 
-    i = 0
+        return True, final_updates
+
+
     for move in moves:
         dir = directions[move]
-        # new_pos = pos + dir
-        next_free_pos, map_updates = project_next_pos(pos, dir,0)
+        is_free, map_updates = project_next_pos(pos, dir)
         
-
         # free to move
-        if next_free_pos:
-            for index in sorted(map_updates.keys(),reverse=True):
-                for (x,y), type in map_updates[index].items():
-                    map_array[x,y] = type
+        if is_free:
+            for index in sorted(map_updates.keys(), reverse=True):
+                for (x, y), type in map_updates[index].items():
+                    map_array[x, y] = type
+            pos += dir  # Move player
 
-            pos += dir
-
-            # if 19 <= i<= 22:
-            # print(move, map_updates, next_free_pos)
-            # print("\n".join(["".join(l) for l in map_array]))
-        i+=1
     print("\n".join(["".join(l) for l in map_array]))
 
     # compute GPS coordinates
@@ -213,7 +169,7 @@ def wide_warehouse(map,moves):
 
 
 file_name = "data/example.txt"
-# file_name = "data/dec-15.txt"
+file_name = "data/dec-15.txt"
 
 map, moves = load_data(file_name)
 
