@@ -4,7 +4,7 @@ from tqdm import tqdm
 import itertools
 import re
 import heapq
-
+from collections import defaultdict
 
 # DAY 16 Reindeer maze
 
@@ -69,15 +69,17 @@ def comfy_maze_bfs(map):
     rotate_left  = (0, -1, 1, 0)
     
     visited = set()
-    queue = [( 0, start, (0,1), [])] # score, pos, dir, path
+    queue = [( 0, (int(start[0]), int(start[1])), (0,1))] # score, pos, dir
     heapq.heapify(queue)
 
     min_score = math.inf
     best_path = set()
+    path_scores = defaultdict(set)
     visited_paths = {}
+    visited_scores = defaultdict(dict)
 
     while queue:
-        score, (x,y), dir, path = heapq.heappop(queue)
+        score, (x,y), dir = heapq.heappop(queue)
         
         if map_array[x,y] == "#":
             continue
@@ -85,29 +87,26 @@ def comfy_maze_bfs(map):
         if score > min_score:
             continue
         
-        if (x,y, dir, tuple(path)) in visited:
-            continue
-
-        visited.add((x,y, dir, tuple(path)))
-        path.append((x,y))
-        
         if map_array[x,y] == "E":
             min_score = min(min_score, score)
-            visited_paths[tuple(visited)] = score
-            
-            if score == min_score:
-                best_path.update(path)
-                continue
-            else:
-                break
+            visited_scores[(x,y,)][dir] = score
+            print(score)
+            continue
 
+        if dir in visited_scores[(x,y,)]:
+            continue
+        visited_scores[(x,y,)][dir] = score
 
         # forward
-        heapq.heappush(queue, (score +1,(x +dir[0], y + dir[1]), dir, path.copy()))
+        heapq.heappush(queue, (score +1,(x +dir[0], y + dir[1]), dir))
         # rotate left and right
-        heapq.heappush(queue, (score + 1000, (x, y), rotate(dir,rotate_right), path.copy()))
-        heapq.heappush(queue, (score + 1000, (x, y), rotate(dir,rotate_left), path.copy()))
+        heapq.heappush(queue, (score + 1000, (x, y), rotate(dir,rotate_right)))
+        heapq.heappush(queue, (score + 1000, (x, y), rotate(dir,rotate_left)))
 
+    # print(path_scores)
+    print(visited_scores)
+    print(len(visited_scores))
+    # TODO: run the visited_scores in reverse then run through the paths that lead back to score = 0
     
     return min_score, len(best_path)
 
